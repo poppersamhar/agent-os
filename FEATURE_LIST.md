@@ -47,10 +47,10 @@
 | F-030 | WorkAgent — 知识图谱自动沉淀 | P2 | Planned | WorkAgent | [v0.1.0.md](features/v0.1.0.md#F-030) |
 | F-031 | HubAgent — OrgAgent Summary 上报 | P2 | Planned | HubAgent / OrgAgent | [v0.1.0.md](features/v0.1.0.md#F-031) |
 | F-032 | 项目归档 | P3 | InProgress | 项目 | [v0.1.0.md](features/v0.1.0.md#F-032) |
-| F-033 | 任务页 — 聊天输入 @ 引用数据源 | P1 | InProgress | 任务 | — |
-| F-034 | Sidebar — 项目置顶 / 重命名 / 归档 | P1 | Completed | 全局 | — |
-| F-035 | 项目页 — 文件 Tab（上下文 + 产物）| P1 | Completed | 项目 | — |
-| F-036 | 任务页 — 项目树（上下文 + 产物）| P1 | Completed | 任务 | — |
+| F-033 | 任务页 — 聊天输入 @ 引用数据源 | P1 | InProgress | 任务 | [v0.1.0.md](features/v0.1.0.md#F-033) |
+| F-034 | Sidebar — 项目置顶 / 重命名 / 归档 | P1 | Completed | 全局 | [v0.1.0.md](features/v0.1.0.md#F-034) |
+| F-035 | 项目页 — 文件 Tab（上下文 + 产物）| P1 | Completed | 项目 | [v0.1.0.md](features/v0.1.0.md#F-035) |
+| F-036 | 任务页 — 项目树（上下文 + 产物）| P1 | Completed | 任务 | [v0.1.0.md](features/v0.1.0.md#F-036) |
 
 ---
 
