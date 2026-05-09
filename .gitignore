@@ -35,3 +35,4 @@ tmp/
 # Backend dist (will be built separately)
 backend/dist/
 backend/node_modules/
+.vercel
