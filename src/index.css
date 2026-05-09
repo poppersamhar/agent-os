@@ -1,0 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+@import "tailwindcss";
+
+/* ===== Theme Colors (CSS Custom Properties) ===== */
+/* ===== Monochrome + Warm Coral Accent · 黑白灰 + 暖桃点缀 ===== */
+
+/* ── Light · 浅灰（默认）── */
+:root, [data-theme="ink"] {
+  --primary: #111111;
+  --primary-dark: #000000;
+  --primary-light: #e8e8e8;
+  --primary-subtle: #f5f5f5;
+  --sidebar-bg: #f5f5f5;
+  --main-bg: #ffffff;
+  --glass-bg: rgba(0, 0, 0, 0.04);
+  --glass-border: rgba(0, 0, 0, 0.10);
+  --selection-bg: #FDF0EA;
+  --selection-text: #1a1a1a;
+  --accent: #000000;
+  --accent-subtle: #FDF0EA;
+}
+
+/* ── Medium · 中灰 ── */
+[data-theme="stone"] {
+  --primary: #2a2a2a;
+  --primary-dark: #111111;
+  --primary-light: #d0d0d0;
+  --primary-subtle: #eeeeee;
+  --sidebar-bg: #e8e8e8;
+  --main-bg: #ffffff;
+  --glass-bg: rgba(42, 42, 42, 0.04);
+  --glass-border: rgba(42, 42, 42, 0.10);
+  --selection-bg: #F2E8F5;
+  --selection-text: #2a2a2a;
+  --accent: #B085C0;
+  --accent-subtle: #F2E8F5;
+}
+
+/* ── Deep · 深灰 ── */
+[data-theme="charcoal"] {
+  --primary: #3d3d3d;
+  --primary-dark: #1a1a1a;
+  --primary-light: #bbbbbb;
+  --primary-subtle: #e0e0e0;
+  --sidebar-bg: #dddddd;
+  --main-bg: #ffffff;
+  --glass-bg: rgba(61, 61, 61, 0.04);
+  --glass-border: rgba(61, 61, 61, 0.10);
+  --selection-bg: #F2E8F5;
+  --selection-text: #3d3d3d;
+  --accent: #B085C0;
+  --accent-subtle: #F2E8F5;
+}
+
+@theme {
+  /* ── 黑白灰底 ── */
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-border: #e8e8e8;
+  --color-border-light: #f2f2f2;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #525252;
+  --color-text-muted: #b0b0b0;
+  --color-text-placeholder: #cccccc;
+
+  /* ── 主色（动态主题）── */
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-subtle: var(--primary-subtle);
+
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-main-bg: var(--main-bg);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+
+  /* ── 点缀色 ── */
+  --color-accent: var(--accent);
+  --color-accent-subtle: var(--accent-subtle);
+
+  /* ── 状态色（纯灰调）── */
+  --color-success: #1a1a1a;
+  --color-success-subtle: #f5f5f5;
+  --color-warning: #333333;
+  --color-warning-subtle: #f5f5f5;
+  --color-danger: #444444;
+  --color-danger-subtle: #f5f5f5;
+  --color-info: #444444;
+  --color-info-subtle: #f5f5f5;
+
+  /* ── 角色色（纯灰调）── */
+  --color-agent-host: #333333;
+  --color-agent-host-subtle: #f5f5f5;
+  --color-agent-normal: #444444;
+  --color-agent-normal-subtle: #f5f5f5;
+  --color-skill: #555555;
+  --color-skill-subtle: #f5f5f5;
+  --color-human: #444444;
+  --color-human-subtle: #f5f5f5;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Noto Sans SC", "Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  background: var(--color-bg);
+  color: var(--color-text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  border: none;
+  text-align: left;
+}
+
+/* Custom scrollbar — 仅滚动/悬停时显示 */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #999999;
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: #d0d0d0 transparent;
+}
+
+/* Animations */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+/* Selection color */
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
