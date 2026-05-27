@@ -102,8 +102,8 @@ export function createRoutes(engine: WorkAgentEngine): Router {
     res.json({ success: true, data: skill });
   });
 
-  /** GET /api/tools - 列出所有工具 */
-  router.get('/tools', (_req, res) => {
+  /** GET /api/connectors - 列出所有连接器（含工具与数字员工） */
+  router.get('/connectors', (_req, res) => {
     const tools = engine.getToolRegistry().list();
     res.json({
       success: true,
@@ -111,8 +111,52 @@ export function createRoutes(engine: WorkAgentEngine): Router {
         name: t.name,
         description: t.description,
         category: t.category,
+        type: 'tool',
         parameters: t.parameters,
       })),
+    });
+  });
+
+  /* ─── 知识库 ─── */
+
+  /** GET /api/knowledge/sources - 知识源列表 */
+  router.get('/knowledge/sources', (_req, res) => {
+    res.json({
+      success: true,
+      data: [
+        { id: 'k1', name: '企业知识库', type: '内部', description: '规章制度、应急预案、技术文档', status: 'connected', entries: 1240 },
+        { id: 'k2', name: '项目知识沉淀', type: '内部', description: '所有项目任务上下文自动汇总', status: 'connected', entries: 356 },
+        { id: 'k3', name: '供应链数据库', type: '第三方', description: '供应商信息、合同数据', status: 'connected', entries: 89 },
+        { id: 'k4', name: '企查查 MCP', type: 'MCP', description: '企业工商信息、信用数据', status: 'connected', entries: 5600 },
+        { id: 'k5', name: '外部评级数据', type: 'API', description: '行业报告、评级数据', status: 'disconnected', entries: 0 },
+        { id: 'k6', name: '数字员工经验', type: '内部', description: 'Skill 执行日志与最佳实践', status: 'connected', entries: 2100 },
+      ],
+    });
+  });
+
+  /** GET /api/knowledge/graph - 全局知识图谱数据 */
+  router.get('/knowledge/graph', (_req, res) => {
+    res.json({
+      success: true,
+      data: {
+        nodes: [
+          { id: 'global-center', label: '组织知识图谱', type: 'core_entity', detail: '全组织知识资产总览' },
+          { id: 'proj-risk', label: '财报分析', type: 'property', detail: '项目 · 3 成员' },
+          { id: 'proj-supply', label: '供应商评估', type: 'property', detail: '项目 · 4 成员' },
+          { id: 'agent-workagent', label: '管理智能体', type: 'property', detail: '任务编排与调度' },
+          { id: 'agent-sub', label: '数字员工', type: 'property', detail: '原子任务执行' },
+          { id: 's1', label: 'SQL分析', type: 'leaf', detail: '数据分析 Skill' },
+          { id: 's2', label: 'Python沙箱', type: 'leaf', detail: '代码执行 Skill' },
+        ],
+        edges: [
+          { source: 'global-center', target: 'proj-risk' },
+          { source: 'global-center', target: 'proj-supply' },
+          { source: 'global-center', target: 'agent-workagent' },
+          { source: 'global-center', target: 'agent-sub' },
+          { source: 'global-center', target: 's1' },
+          { source: 'global-center', target: 's2' },
+        ],
+      },
     });
   });
 

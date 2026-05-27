@@ -96,7 +96,7 @@ function AgentChatPanel({ name, badge, welcomeText, placeholder, attachedContext
             {/* Welcome */}
             <div className="flex gap-2.5 mb-3">
               <div className="w-6 h-6 rounded-full bg-primary-subtle flex items-center justify-center text-[10px] font-bold text-primary-dark shrink-0 mt-0.5">
-                {name === 'HubAgent' ? 'H' : 'O'}
+                {name === 'OrgAgent' ? 'H' : 'O'}
               </div>
               <div className="bg-bg rounded-2xl rounded-tl-sm px-4 py-2.5 text-[12px] text-text-secondary border border-border-light max-w-[85%]">
                 {welcomeText}
@@ -279,13 +279,13 @@ function MemberDashboard() {
         </div>
       </div>
 
-      {/* 右侧 HubAgent */}
+      {/* 右侧 OrgAgent */}
       <div className="w-[380px] shrink-0 pt-12 pr-4 pb-14">
         <AgentChatPanel
-          name="HubAgent"
-          badge="个人全局"
+          name="OrgAgent"
+          badge="企业效能管理"
           welcomeText="你好，samhar。今天有 1 个审批待处理：供应链项目 · 外部 API 调用"
-          placeholder="问 HubAgent..."
+          placeholder="问企业效能管理智能体..."
           attachedContexts={attachedContexts}
           onRemoveContext={handleRemoveContext}
         />
@@ -418,7 +418,7 @@ function AdminDashboard() {
           name="OrgAgent"
           badge="全组织"
           welcomeText="本周组织摘要：\n· 1 个活跃项目，1 个成员参与\n· 供应链金融风控平台效率最高（ROI 1.5x）"
-          placeholder="问 OrgAgent..."
+          placeholder="问企业效能管理智能体..."
           attachedContexts={attachedContexts}
           onRemoveContext={handleRemoveContext}
         />

@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentOS 产品架构全景 v2</title>
+<style>
+:root {
+  --bg-deep: #0d0d0f;
+  --bg-surface: #161619;
+  --bg-card: #1c1c21;
+  --bg-card-hover: #222228;
+  --bg-input: #25252c;
+  --text-primary: #e8e4df;
+  --text-secondary: #9a9590;
+  --text-muted: #5e5b57;
+  --accent-gold: #d4a574;
+  --accent-gold-soft: rgba(212, 165, 116, 0.15);
+  --accent-cyan: #4dd9c4;
+  --accent-cyan-soft: rgba(77, 217, 196, 0.12);
+  --accent-heat: #e07a5f;
+  --accent-heat-soft: rgba(224, 122, 95, 0.15);
+  --accent-blue: #6b8fc7;
+  --accent-blue-soft: rgba(107, 143, 199, 0.15);
+  --accent-purple: #9b8fc4;
+  --accent-purple-soft: rgba(155, 143, 196, 0.15);
+  --border-subtle: rgba(232, 228, 223, 0.08);
+  --border-medium: rgba(232, 228, 223, 0.15);
+  --border-gold: rgba(212, 165, 116, 0.3);
+  --grid-line: rgba(232, 228, 223, 0.04);
+
+  --font-body: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 14px;
+  padding: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 48px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.header .tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  border: 1px solid var(--border-gold);
+  padding: 4px 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+.header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+.header h1 em {
+  font-style: normal;
+  color: var(--accent-gold);
+}
+.header .subtitle {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+/* Section */
+.section {
+  margin-bottom: 48px;
+}
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 24px;
+  background: var(--accent-gold);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.section-desc {
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+/* Page Tree */
+.page-tree {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 32px;
+}
+
+.tree-branch {
+  display: flex;
+  gap: 0;
+  margin-bottom: 2px;
+}
+
+.page-node {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  min-width: 160px;
+  text-align: center;
+  position: relative;
+}
+.page-node .page-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 8px;
+  font-size: 14px;
+}
+.page-node .page-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.page-node .page-role {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.node-home { border-color: var(--accent-cyan-soft); }
+.node-home .page-icon { background: var(--accent-cyan-soft); color: var(--accent-cyan); }
+.node-home .page-role { color: var(--accent-cyan); }
+
+.node-skill { border-color: var(--accent-gold-soft); }
+.node-skill .page-icon { background: var(--accent-gold-soft); color: var(--accent-gold); }
+.node-skill .page-role { color: var(--accent-gold); }
+
+.node-connector { border-color: var(--accent-heat-soft); }
+.node-connector .page-icon { background: var(--accent-heat-soft); color: var(--accent-heat); }
+.node-connector .page-role { color: var(--accent-heat); }
+
+.node-knowledge { border-color: var(--accent-purple-soft); }
+.node-knowledge .page-icon { background: var(--accent-purple-soft); color: var(--accent-purple); }
+.node-knowledge .page-role { color: var(--accent-purple); }
+
+.node-project { border-color: var(--accent-blue-soft); }
+.node-project .page-icon { background: var(--accent-blue-soft); color: var(--accent-blue); }
+.node-project .page-role { color: var(--accent-blue); }
+
+.node-task { border-color: var(--accent-gold-soft); }
+.node-task .page-icon { background: var(--accent-gold-soft); color: var(--accent-gold); }
+.node-task .page-role { color: var(--accent-gold); }
+
+.tree-connector-h {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  flex-shrink: 0;
+}
+.tree-connector-h .line {
+  width: 100%;
+  height: 1px;
+  background: var(--border-medium);
+}
+
+.tree-children {
+  margin-left: 40px;
+  padding-left: 20px;
+  border-left: 1px solid var(--border-medium);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sub-node {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.sub-node .sub-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sub-node .sub-name {
+  font-weight: 500;
+}
+.sub-node .sub-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+/* Functional Module Cards */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.module-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 24px;
+  transition: border-color 0.3s, background 0.3s;
+}
+.module-card:hover {
+  border-color: var(--accent-gold-soft);
+  background: var(--bg-card-hover);
+}
+.module-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.module-card .card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.module-card .card-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.module-card .card-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+.feature-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.feature-list li:last-child {
+  border-bottom: none;
+}
+.feature-list .feat-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-gold);
+  flex-shrink: 0;
+  width: 24px;
+  text-align: right;
+  padding-top: 1px;
+}
+.feature-list .feat-content {
+  flex: 1;
+}
+.feature-list .feat-name {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.feature-list .feat-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Tech Stack */
+.tech-stack {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 32px;
+}
+.stack-layer {
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 2px;
+}
+.stack-label {
+  width: 120px;
+  flex-shrink: 0;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 6px 0 0 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+  padding-right: 16px;
+}
+.stack-label .layer-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+.stack-label .layer-desc {
+  font-size: 10px;
+  opacity: 0.6;
+}
+.layer-interaction .stack-label { background: rgba(77, 217, 196, 0.08); color: var(--accent-cyan); }
+.layer-app .stack-label { background: rgba(212, 165, 116, 0.08); color: var(--accent-gold); }
+.layer-agent .stack-label { background: rgba(224, 122, 95, 0.08); color: var(--accent-heat); }
+.layer-infra .stack-label { background: rgba(107, 143, 199, 0.08); color: var(--accent-blue); }
+.layer-data .stack-label { background: rgba(155, 143, 196, 0.08); color: var(--accent-purple); }
+
+.stack-content {
+  flex: 1;
+  padding: 14px 20px;
+  background: var(--bg-card);
+  border-radius: 0 6px 6px 0;
+  border: 1px solid var(--border-subtle);
+  border-left: none;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.tech-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.tech-item .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  opacity: 0.6;
+}
+.tech-item.primary { border-color: var(--accent-gold-soft); color: var(--text-primary); }
+.tech-item.primary .dot { opacity: 1; }
+
+/* Flow Diagram */
+.flow-diagram {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 32px;
+  overflow-x: auto;
+}
+.flow-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 700px;
+}
+.flow-node {
+  flex-shrink: 0;
+  padding: 12px 18px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  text-align: center;
+  min-width: 110px;
+}
+.flow-node .node-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.flow-node .node-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.flow-node.orgagent { border-color: var(--accent-cyan-soft); }
+.flow-node.orgagent .node-title { color: var(--accent-cyan); }
+.flow-node.workagent { border-color: var(--accent-gold-soft); }
+.flow-node.workagent .node-title { color: var(--accent-gold); }
+.flow-node.subagent { border-color: var(--accent-heat-soft); }
+.flow-node.subagent .node-title { color: var(--accent-heat); }
+.flow-node.system { border-color: var(--accent-blue-soft); }
+.flow-node.system .node-title { color: var(--accent-blue); }
+.flow-arrow {
+  color: var(--accent-gold);
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .module-grid { grid-template-columns: 1fr; }
+  .tree-branch { flex-direction: column; }
+  .tree-connector-h { display: none; }
+  .tree-children { margin-left: 20px; }
+  .flow-track { flex-direction: column; min-width: auto; }
+  .flow-arrow { transform: rotate(90deg); }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="tag">Frontend Architecture</div>
+    <h1>Agent<em>OS</em> 产品功能模块架构</h1>
+    <p class="subtitle">基于前端页面结构的完整功能树 · 一级页面 · 二级功能</p>
+  </div>
+
+  <!-- Section 1: 页面功能树 -->
+  <div class="section">
+    <h2 class="section-title">页面功能总览</h2>
+    <p class="section-desc">AgentOS 前端共 8 个一级页面，按 Sidebar 导航组织。</p>
+
+    <div class="page-tree">
+
+      <!-- 首页 -->
+      <div class="tree-branch">
+        <div class="page-node node-home">
+          <div class="page-icon">H</div>
+          <div class="page-name">首页</div>
+          <div class="page-role">Dashboard</div>
+        </div>
+        <div class="tree-connector-h"><div class="line"></div></div>
+        <div class="tree-children" style="flex:1">
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">数据看板</span>
+            <span class="sub-desc">Member: Token消耗 / 活跃项目 / 任务成功率 · Admin: 全组织Token / 活跃成员 / 活跃项目</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">项目 Token 消耗概览</span>
+            <span class="sub-desc">各项目 Token 用量排行与进度条</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">近7日消耗走势</span>
+            <span class="sub-desc">柱状图展示周级 Token 趋势</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">项目上下文记忆</span>
+            <span class="sub-desc">项目 context.md 列表，支持 @ 引用到 OrgAgent</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">OrgAgent 对话面板</span>
+            <span class="sub-desc">企业效能管理智能体对话区，快捷操作入口</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">成员概览（Admin 专属）</span>
+            <span class="sub-desc">成员列表、负责项目、本月 Token 消耗</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">全组织费用趋势（Admin 专属）</span>
+            <span class="sub-desc">组织级周费用柱状图</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <!-- Skills -->
+      <div class="tree-branch">
+        <div class="page-node node-skill">
+          <div class="page-icon">S</div>
+          <div class="page-name">Skills</div>
+          <div class="page-role">技能资产</div>
+        </div>
+        <div class="tree-connector-h"><div class="line"></div></div>
+        <div class="tree-children" style="flex:1">
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-gold)"></span>
+            <span class="sub-name">Skill 卡片网格</span>
+            <span class="sub-desc">预设 Skill + 自建 Skill，按分类（知识工程/数据治理/分析/工具）展示</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-gold)"></span>
+            <span class="sub-name">Skill Creator</span>
+            <span class="sub-desc">新建 Skill 引导，配置名称/描述/图标/分类</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-gold)"></span>
+            <span class="sub-name">Skill 编辑 / 删除</span>
+            <span class="sub-desc">三点菜单：编辑 Skill 信息、删除自建 Skill</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-gold)"></span>
+            <span class="sub-name">Skill 详情</span>
+            <span class="sub-desc">查看 Skill 完整配置与使用说明</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <!-- 连接器 -->
+      <div class="tree-branch">
+        <div class="page-node node-connector">
+          <div class="page-icon">C</div>
+          <div class="page-name">连接器</div>
+          <div class="page-role">Connectors</div>
+        </div>
+        <div class="tree-connector-h"><div class="line"></div></div>
+        <div class="tree-children" style="flex:1">
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-heat)"></span>
+            <span class="sub-name">连接器列表</span>
+            <span class="sub-desc">MCP / API / 数字员工 / 其他 四类筛选展示</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-heat)"></span>
+            <span class="sub-name">连接器卡片</span>
+            <span class="sub-desc">名称、描述、分类、参数定义、状态</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-heat)"></span>
+            <span class="sub-name">OrgAgent 管理面板</span>
+            <span class="sub-desc">连接器统一管理与调度入口</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <!-- 知识库 -->
+      <div class="tree-branch">
+        <div class="page-node node-knowledge">
+          <div class="page-icon">K</div>
+          <div class="page-name">知识库</div>
+          <div class="page-role">Knowledge</div>
+        </div>
+        <div class="tree-connector-h"><div class="line"></div></div>
+        <div class="tree-children" style="flex:1">
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-purple)"></span>
+            <span class="sub-name">全局知识图谱</span>
+            <span class="sub-desc">可视化全组织知识资产关联关系（节点+连线）</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-purple)"></span>
+            <span class="sub-name">知识源管理</span>
+            <span class="sub-desc">全部 / 内部 / 第三方 / MCP / API 五类筛选</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-purple)"></span>
+            <span class="sub-name">知识源卡片</span>
+            <span class="sub-desc">名称、类型、描述、状态、条目数</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-purple)"></span>
+            <span class="sub-name">OrgAgent 知识管理面板</span>
+            <span class="sub-desc">知识库问答与知识源配置入口</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <!-- 项目 -->
+      <div class="tree-branch">
+        <div class="page-node node-project">
+          <div class="page-icon">P</div>
+          <div class="page-name">项目</div>
+          <div class="page-role">Project</div>
+        </div>
+        <div class="tree-connector-h"><div class="line"></div></div>
+        <div class="tree-children" style="flex:1">
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-blue)"></span>
+            <span class="sub-name">任务列表</span>
+            <span class="sub-desc">项目内所有任务卡片，支持置顶/重命名/归档</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-blue)"></span>
+            <span class="sub-name">WorkAgent 对话面板</span>
+            <span class="sub-desc">管理智能体对话区，发起任务、查看项目状态</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-blue)"></span>
+            <span class="sub-name">文件 Tab</span>
+            <span class="sub-desc">项目产物卡片置顶展示，上下文文件与产物分类管理</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-blue)"></span>
+            <span class="sub-name">项目状态概览</span>
+            <span class="sub-desc">当前任务执行状态、待审批提醒</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <!-- 任务执行 -->
+      <div class="tree-branch">
+        <div class="page-node node-task">
+          <div class="page-icon">T</div>
+          <div class="page-name">任务执行</div>
+          <div class="page-role">TaskSpace</div>
+        </div>
+        <div class="tree-connector-h"><div class="line"></div></div>
+        <div class="tree-children" style="flex:1">
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-gold)"></span>
+            <span class="sub-name">聊天式执行流</span>
+            <span class="sub-desc">8 种消息类型实时呈现（member/workagent/question/plan/subagent/completion/system/permission）</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-gold)"></span>
+            <span class="sub-name">附件上传</span>
+            <span class="sub-desc">+ 号上传文件到任务上下文</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-gold)"></span>
+            <span class="sub-name">Token 用量指示器</span>
+            <span class="sub-desc">实时显示当前任务 Token 消耗</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-gold)"></span>
+            <span class="sub-name">右侧面板 — 任务树</span>
+            <span class="sub-desc">子任务拆分、执行进度与阻塞状态</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-gold)"></span>
+            <span class="sub-name">右侧面板 — 项目树</span>
+            <span class="sub-desc">项目全景、快速切换关联任务、引用历史上下文</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <!-- 新建任务 -->
+      <div class="tree-branch">
+        <div class="page-node node-project">
+          <div class="page-icon">N</div>
+          <div class="page-name">新建任务</div>
+          <div class="page-role">NewTask</div>
+        </div>
+        <div class="tree-connector-h"><div class="line"></div></div>
+        <div class="tree-children" style="flex:1">
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-blue)"></span>
+            <span class="sub-name">任务名称输入</span>
+            <span class="sub-desc">快速创建独立任务或项目内任务</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-blue)"></span>
+            <span class="sub-name">快捷创建引导</span>
+            <span class="sub-desc">推荐任务模板与最近使用</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <!-- 设置 -->
+      <div class="tree-branch">
+        <div class="page-node node-home">
+          <div class="page-icon">A</div>
+          <div class="page-name">组织管理</div>
+          <div class="page-role">Admin Only</div>
+        </div>
+        <div class="tree-connector-h"><div class="line"></div></div>
+        <div class="tree-children" style="flex:1">
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">成员管理</span>
+            <span class="sub-desc">组织成员列表、权限分配</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">团队管理</span>
+            <span class="sub-desc">团队架构与分组管理</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">用量管理</span>
+            <span class="sub-desc">Token 用量统计与配额管理</span>
+          </div>
+          <div class="sub-node">
+            <span class="sub-dot" style="background:var(--accent-cyan)"></span>
+            <span class="sub-name">系统设置</span>
+            <span class="sub-desc">全局配置、安全策略、集成设置</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section 2: Sidebar 导航结构 -->
+  <div class="section">
+    <h2 class="section-title">Sidebar 导航结构</h2>
+    <p class="section-desc">左侧 240px Sidebar，支持折叠。全局导航 + 项目树 + 独立任务历史。</p>
+
+    <div class="module-grid">
+      <div class="module-card">
+        <div class="card-header">
+          <div class="card-icon icon-cyan">01</div>
+          <div>
+            <div class="card-title">主导航区</div>
+            <div class="card-subtitle">顶部固定导航 · 滚轮切换</div>
+          </div>
+        </div>
+        <ul class="feature-list">
+          <li>
+            <span class="feat-num">1.1</span>
+            <div class="feat-content">
+              <div class="feat-name">首页（Home）</div>
+              <div class="feat-desc">个人/组织数据看板 + OrgAgent 对话区</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">1.2</span>
+            <div class="feat-content">
+              <div class="feat-name">Skills（Wrench）</div>
+              <div class="feat-desc">Skill 列表与 Skill Creator</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">1.3</span>
+            <div class="feat-content">
+              <div class="feat-name">连接器（Plug）</div>
+              <div class="feat-desc">MCP/API/数字员工连接器管理</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">1.4</span>
+            <div class="feat-content">
+              <div class="feat-name">知识库（BookOpen）</div>
+              <div class="feat-desc">全局知识图谱 + 知识源管理</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <div class="card-header">
+          <div class="card-icon icon-gold">02</div>
+          <div>
+            <div class="card-title">任务操作区</div>
+            <div class="card-subtitle">快速创建 + 任务历史</div>
+          </div>
+        </div>
+        <ul class="feature-list">
+          <li>
+            <span class="feat-num">2.1</span>
+            <div class="feat-content">
+              <div class="feat-name">新建任务（+）</div>
+              <div class="feat-desc">快速创建独立任务，进入 TaskSpace</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">2.2</span>
+            <div class="feat-content">
+              <div class="feat-name">历史对话（可折叠）</div>
+              <div class="feat-desc">独立任务列表，支持置顶/重命名/归档</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <div class="card-header">
+          <div class="card-icon icon-blue">03</div>
+          <div>
+            <div class="card-title">项目管理区</div>
+            <div class="card-subtitle">我的项目 + 任务树</div>
+          </div>
+        </div>
+        <ul class="feature-list">
+          <li>
+            <span class="feat-num">3.1</span>
+            <div class="feat-content">
+              <div class="feat-name">我的项目列表</div>
+              <div class="feat-desc">项目卡片，支持置顶/重命名/归档/展开折叠</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">3.2</span>
+            <div class="feat-content">
+              <div class="feat-name">项目内任务树</div>
+              <div class="feat-desc">展开项目后显示任务列表，点击进入 TaskSpace</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">3.3</span>
+            <div class="feat-content">
+              <div class="feat-name">新建项目（+）</div>
+              <div class="feat-desc">ProjectWizard 弹窗，填写名称与描述</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <div class="card-header">
+          <div class="card-icon icon-cyan">04</div>
+          <div>
+            <div class="card-title">组织管理区</div>
+            <div class="card-subtitle">Admin 专属 · 外部跳转</div>
+          </div>
+        </div>
+        <ul class="feature-list">
+          <li>
+            <span class="feat-num">4.1</span>
+            <div class="feat-content">
+              <div class="feat-name">成员管理（UserCog）</div>
+              <div class="feat-desc">跳转外部管理后台</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">4.2</span>
+            <div class="feat-content">
+              <div class="feat-name">团队管理（Users）</div>
+              <div class="feat-desc">跳转外部管理后台</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">4.3</span>
+            <div class="feat-content">
+              <div class="feat-name">用量管理（TrendingUp）</div>
+              <div class="feat-desc">跳转外部管理后台</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">4.4</span>
+            <div class="feat-content">
+              <div class="feat-name">系统设置（Settings）</div>
+              <div class="feat-desc">跳转外部管理后台</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <div class="card-header">
+          <div class="card-icon icon-heat">05</div>
+          <div>
+            <div class="card-title">用户卡片</div>
+            <div class="card-subtitle">底部固定 · 角色切换</div>
+          </div>
+        </div>
+        <ul class="feature-list">
+          <li>
+            <span class="feat-num">5.1</span>
+            <div class="feat-content">
+              <div class="feat-name">用户信息展示</div>
+              <div class="feat-desc">头像、用户名、角色（Member/Admin）</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">5.2</span>
+            <div class="feat-content">
+              <div class="feat-name">切换角色</div>
+              <div class="feat-desc">Member/Admin 身份快速切换</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">5.3</span>
+            <div class="feat-content">
+              <div class="feat-name">退出登录</div>
+              <div class="feat-desc">清除登录态，返回登录页</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <div class="card-header">
+          <div class="card-icon icon-purple">06</div>
+          <div>
+            <div class="card-title">全局交互</div>
+            <div class="card-subtitle">鼠标滚轮 · 快捷操作</div>
+          </div>
+        </div>
+        <ul class="feature-list">
+          <li>
+            <span class="feat-num">6.1</span>
+            <div class="feat-content">
+              <div class="feat-name">滚轮切换全局页</div>
+              <div class="feat-desc">在首页/Skills/连接器/知识库间通过鼠标滚轮循环切换</div>
+            </div>
+          </li>
+          <li>
+            <span class="feat-num">6.2</span>
+            <div class="feat-content">
+              <div class="feat-name">Sidebar 折叠</div>
+              <div class="feat-desc">点击箭头收起为 56px 图标栏，再次点击展开</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: 技术栈 -->
+  <div class="section">
+    <h2 class="section-title">技术路线架构</h2>
+    <p class="section-desc">从前端交互到后端服务，再到模型层与数据连接层的完整技术栈。</p>
+
+    <div class="tech-stack">
+      <div class="stack-layer layer-interaction">
+        <div class="stack-label">
+          <span class="layer-name">交互层</span>
+          <span class="layer-desc">用户界面</span>
+        </div>
+        <div class="stack-content">
+          <span class="tech-item primary"><span class="dot"></span>React 18 + TypeScript</span>
+          <span class="tech-item">Vite 构建工具</span>
+          <span class="tech-item">Tailwind CSS v4</span>
+          <span class="tech-item">Lucide React 图标</span>
+          <span class="tech-item">WebSocket 实时通信</span>
+        </div>
+      </div>
+
+      <div class="stack-layer layer-app">
+        <div class="stack-label">
+          <span class="layer-name">应用层</span>
+          <span class="layer-desc">核心逻辑</span>
+        </div>
+        <div class="stack-content">
+          <span class="tech-item primary"><span class="dot"></span>路由与状态管理</span>
+          <span class="tech-item">ThemeContext 主题管理</span>
+          <span class="tech-item">WorkAgentClient WS 客户端</span>
+          <span class="tech-item">Mock Data 数据层</span>
+        </div>
+      </div>
+
+      <div class="stack-layer layer-agent">
+        <div class="stack-label">
+          <span class="layer-name">智能体层</span>
+          <span class="layer-desc">Agent 引擎</span>
+        </div>
+        <div class="stack-content">
+          <span class="tech-item primary"><span class="dot"></span>WorkAgentEngine 编排引擎</span>
+          <span class="tech-item">SessionManager 会话管理</span>
+          <span class="tech-item">SkillRegistry 技能注册</span>
+          <span class="tech-item">ToolRegistry 连接器注册</span>
+        </div>
+      </div>
+
+      <div class="stack-layer layer-infra">
+        <div class="stack-label">
+          <span class="layer-name">服务层</span>
+          <span class="layer-desc">后端服务</span>
+        </div>
+        <div class="stack-content">
+          <span class="tech-item primary"><span class="dot"></span>NestJS + Express</span>
+          <span class="tech-item">REST API 路由层</span>
+          <span class="tech-item">WebSocket 实时消息</span>
+          <span class="tech-item">pnpm + TypeScript</span>
+        </div>
+      </div>
+
+      <div class="stack-layer layer-data">
+        <div class="stack-label">
+          <span class="layer-name">连接层</span>
+          <span class="layer-desc">外部系统</span>
+        </div>
+        <div class="stack-content">
+          <span class="tech-item primary"><span class="dot"></span>MCP 协议对接</span>
+          <span class="tech-item">ERP / CRM / SCADA / OA</span>
+          <span class="tech-item">第三方数字员工接入</span>
+          <span class="tech-item">API 连接器（REST/GraphQL）</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: 任务执行数据流 -->
+  <div class="section">
+    <h2 class="section-title">任务执行数据流</h2>
+    <p class="section-desc">从需求输入到成果归档，完整的任务自动编排与执行闭环。</p>
+
+    <div class="flow-diagram">
+      <div class="flow-track">
+        <div class="flow-node orgagent">
+          <div class="node-title">用户</div>
+          <div class="node-desc">自然语言输入需求</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node workagent">
+          <div class="node-title">WorkAgent</div>
+          <div class="node-desc">解析需求生成 Plan</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node workagent">
+          <div class="node-title">Plan 审批</div>
+          <div class="node-desc">人工确认执行方案</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node subagent">
+          <div class="node-title">Sub-Agent</div>
+          <div class="node-desc">按步骤执行子任务</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node subagent">
+          <div class="node-title">Skill/Connector</div>
+          <div class="node-desc">调用工具完成操作</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node system">
+          <div class="node-title">成果归档</div>
+          <div class="node-desc">写入项目上下文</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center; color:var(--text-muted); font-size:12px; font-family:var(--font-mono); padding-top:32px; border-top:1px solid var(--border-subtle); margin-top:48px;">
+    AgentOS · 产品功能模块架构 · v2.0 · 2026
+  </div>
+
+</div>
+
+</body>
+</html>

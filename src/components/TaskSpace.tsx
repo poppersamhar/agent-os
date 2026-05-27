@@ -16,7 +16,6 @@ import {
 import type { Project, Chat } from '../data/mockData';
 import { WorkAgentClient, createSession, listSkills } from '../api/workagent';
 import type { AgentMessage, ExecutionMode, Skill } from '../types/workagent';
-import KnowledgeGraph from './KnowledgeGraph';
 
 /* ─── 下载辅助函数 ─── */
 async function downloadFile(url: string, fileName: string) {
@@ -243,7 +242,7 @@ function PermissionRequestCard({ msg, onApprove, onReject }: {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[11px] font-medium text-text">WorkAgent</span>
+          <span className="text-[11px] font-medium text-text">管理智能体</span>
           <span className="text-[10px] text-text-muted font-medium">· 等待授权</span>
         </div>
         <div className="bg-bg rounded-xl p-4 border border-border">
@@ -281,7 +280,7 @@ function StreamingIndicator({ text }: { text: string }) {
       <WorkAgentAvatar />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-[11px] font-medium text-text">WorkAgent</span>
+          <span className="text-[11px] font-medium text-text">管理智能体</span>
           <span className="text-[10px] text-primary">· 思考中</span>
           <Loader2 className="w-3 h-3 text-primary animate-spin" strokeWidth={2} />
         </div>
@@ -454,7 +453,7 @@ function MemberMessage({ msg }: { msg: TaskMessage }) {
   );
 }
 
-/* ─── WorkAgent 追问卡片（Kollab 风格需求澄清） ─── */
+/* ─── 管理智能体 追问卡片（Kollab 风格需求澄清） ─── */
 function QuestionMessage({ msg, onAnswer }: { msg: TaskMessage; onAnswer?: (answer: string) => void }) {
   const [answered, setAnswered] = useState(false);
   return (
@@ -490,7 +489,7 @@ function QuestionMessage({ msg, onAnswer }: { msg: TaskMessage; onAnswer?: (answ
   );
 }
 
-/* ─── WorkAgent 普通消息（支持 Reasoning） ─── */
+/* ─── 管理智能体 普通消息（支持 Reasoning） ─── */
 function WorkAgentMessage({ msg }: { msg: TaskMessage }) {
   const hasReasoning = !!msg.metadata?.reasoning;
 
@@ -530,7 +529,7 @@ function PlanConfirmCard({ steps, onConfirm }: { steps: PlanStep[]; onConfirm: (
       <WorkAgentAvatar />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[11px] font-medium text-text">WorkAgent</span>
+          <span className="text-[11px] font-medium text-text">管理智能体</span>
           <span className="text-[10px] text-text-muted">· 执行方案</span>
         </div>
         <div className="bg-bg rounded-xl p-4 border border-border-light">
@@ -557,7 +556,7 @@ function PlanConfirmCard({ steps, onConfirm }: { steps: PlanStep[]; onConfirm: (
   );
 }
 
-/* ─── Sub-Agent 折叠汇报卡片 ─── */
+/* ─── 数字员工 折叠汇报卡片 ─── */
 function SubAgentMessage({ msg, onClick }: { msg: TaskMessage; onClick?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const toolMap: Record<string, { skills: string; category: ToolCategory }> = {
@@ -700,7 +699,7 @@ function CompletionMessage({ msg, onViewReport, onPreview }: { msg: TaskMessage;
       <WorkAgentAvatar />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[11px] font-medium text-text">WorkAgent</span>
+          <span className="text-[11px] font-medium text-text">管理智能体</span>
           <span className="text-[10px] text-success font-medium">· 任务完成</span>
           <CheckCircle2 className="w-3 h-3 text-success" strokeWidth={2} />
         </div>
@@ -978,168 +977,6 @@ function RenameDialog({ currentName, onConfirm, onCancel }: {
   );
 }
 
-/* ═══════════════════════════════════════════════
-   图谱 Tab — 三个子视图
-   ═══════════════════════════════════════════════ */
-
-type GraphSubTab = 'knowledge' | 'evolution';
-
-/* ── 知识图谱子视图 ── */
-function KnowledgeGraphView({ taskId }: { taskId: string }) {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <>
-      <div className="flex items-center justify-center py-2">
-        <div
-          className="w-full aspect-square rounded-xl border border-primary/20 shadow-[0_8px_40px_rgba(0,0,0,0.08)] bg-white overflow-hidden cursor-zoom-in"
-          onDoubleClick={() => setExpanded(true)}
-        >
-          <KnowledgeGraph projectId={taskId} />
-        </div>
-      </div>
-      <p className="text-[11px] text-text-muted text-center mt-1">双击卡片全屏查看 · 滚轮缩放 · 拖拽平移</p>
-
-      {/* 全屏预览 */}
-      {expanded && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center" onClick={() => setExpanded(false)}>
-          <div className="absolute inset-0 bg-white/40 backdrop-blur-sm" />
-          <div
-            className="relative bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all"
-            style={{ width: 'min(90vw, 900px)', height: 'min(85vh, 700px)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-light bg-white">
-              <div className="flex items-center gap-2">
-                <GitBranch className="w-4 h-4 text-text-muted" strokeWidth={1.5} />
-                <span className="text-[13px] font-semibold text-text">知识图谱</span>
-              </div>
-              <button onClick={() => setExpanded(false)} className="p-2 hover:bg-bg rounded-lg text-text-muted transition-colors">
-                <X className="w-4 h-4" strokeWidth={1.5} />
-              </button>
-            </div>
-            <div className="flex-1 min-h-0">
-              <KnowledgeGraph projectId={taskId} />
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-/* ── 上下文演化子视图 ── */
-function ContextEvolutionView() {
-  const versions = [
-    {
-      version: 'v5',
-      time: '09:34',
-      agent: 'SlideCraft',
-      type: 'sub_agent' as const,
-      changes: ['PPT 结构定义（15 页目录）', '产出文件路径：corbusier-ppt/index.html'],
-    },
-    {
-      version: 'v4',
-      time: '09:34',
-      agent: 'ContentWriter',
-      type: 'sub_agent' as const,
-      changes: ['柯布西耶生平概要', '建筑理念 5 条', '代表作品 12 个', '影响流派 3 个'],
-    },
-    {
-      version: 'v3',
-      time: '09:33',
-      agent: 'ThemeEngine',
-      type: 'sub_agent' as const,
-      changes: ['沙丘主题色 CSS 变量', '配色方案确认'],
-    },
-    {
-      version: 'v2',
-      time: '09:33',
-      agent: 'WorkAgent',
-      type: 'sub_agent' as const,
-      changes: ['主题色确认：沙丘', '页数确认：15', '风格确认：建筑专业介绍'],
-    },
-    {
-      version: 'v1',
-      time: '09:32',
-      agent: '用户',
-      type: 'user' as const,
-      changes: ['任务创建：生成柯布西耶 PPT'],
-    },
-  ];
-
-  return (
-    <div className="space-y-0">
-      {versions.map((v, i) => (
-        <div key={v.version} className="flex gap-3">
-          {/* 时间轴轴线 */}
-          <div className="flex flex-col items-center">
-            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-              v.type === 'user' ? 'bg-[#3B82F6]' : 'bg-[#7C3AED]'
-            }`} />
-            {i < versions.length - 1 && <div className="w-px flex-1 bg-border my-1" />}
-          </div>
-
-          {/* 内容卡片 */}
-          <div className="flex-1 pb-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[11px] font-semibold text-text">{v.version}</span>
-              <span className="text-[10px] text-text-muted">{v.time}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                v.type === 'user'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-purple-50 text-purple-600'
-              }`}>
-                {v.agent}
-              </span>
-            </div>
-            <div className="space-y-0.5">
-              {v.changes.map((c, j) => (
-                <div key={j} className="text-[11px] text-text-secondary flex items-start gap-1">
-                  <span className="text-success mt-0.5">+</span>
-                  <span>{c}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ── 图谱 Tab 主容器 ── */
-function GraphTab({ taskId }: { taskId: string }) {
-  const [subTab, setSubTab] = useState<GraphSubTab>('knowledge');
-
-  const subTabs: { key: GraphSubTab; label: string }[] = [
-    { key: 'knowledge', label: '知识图谱' },
-    { key: 'evolution', label: '上下文演化' },
-  ];
-
-  return (
-    <div className="space-y-3">
-      {/* 子 Tab 切换 */}
-      <div className="flex items-center gap-1 bg-bg rounded-lg p-0.5">
-        {subTabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setSubTab(t.key)}
-            className={`flex-1 py-1.5 text-[11px] rounded-md transition-colors ${
-              subTab === t.key ? 'bg-white text-text font-medium shadow-sm' : 'text-text-muted hover:text-text'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 子视图内容 */}
-      {subTab === 'knowledge' && <KnowledgeGraphView taskId={taskId} />}
-      {subTab === 'evolution' && <ContextEvolutionView />}
-    </div>
-  );
-}
-
 /* ─── 右侧面板 ─── */
 function RightPanel({ taskId, projectId, project, dynamicSteps, reportDetail, onCloseReport, contextFiles = [], artifacts = [], agentOrchestration = [], onUploadContext }: {
   taskId: string;
@@ -1154,18 +991,16 @@ function RightPanel({ taskId, projectId, project, dynamicSteps, reportDetail, on
   onUploadContext?: (files: FileList) => void;
 }) {
   const contextFileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'tree' | 'project' | 'graph'>('tree');
-  const [graphExpanded, setGraphExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'tree' | 'project'>('tree');
 
   const tabs = [
     { key: 'tree' as const, label: '任务树', icon: BarChart3 },
     ...(projectId ? [{ key: 'project' as const, label: '项目树', icon: FileSpreadsheet }] : []),
-    { key: 'graph' as const, label: '图谱', icon: GitBranch },
   ];
 
   // 如果有报告详情，自动切换到任务树tab（报告嵌入在任务树中）
   useEffect(() => {
-    if (reportDetail && activeTab !== 'graph') {
+    if (reportDetail) {
       setActiveTab('tree');
     }
   }, [reportDetail]);
@@ -1357,8 +1192,6 @@ function RightPanel({ taskId, projectId, project, dynamicSteps, reportDetail, on
           </>
         )}
 
-        {/* ── 图谱 Tab ── */}
-        {activeTab === 'graph' && <GraphTab taskId={taskId} />}
       </div>
     </div>
   );
@@ -1505,7 +1338,7 @@ function ChatInput({ onSend, disabled, tokenUsed = 18.5, tokenTotal = 20 }: { on
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            placeholder={disabled ? 'WorkAgent 执行中，请稍候...' : isDragging ? '释放以添加文件...' : '与 WorkAgent 对话，或输入指令...'}
+            placeholder={disabled ? '管理智能体 执行中，请稍候...' : isDragging ? '释放以添加文件...' : '与 管理智能体 对话，或输入指令...'}
             rows={1}
             disabled={disabled}
             className="w-full bg-transparent resize-none outline-none text-[13px] text-text px-3 pt-3 pb-1 disabled:cursor-not-allowed"
@@ -1673,14 +1506,14 @@ export default function TaskSpace({ project, task, onBack, onRename, onPin, onAr
 
   // 动态步骤状态（从 pending 开始，随后端执行进度更新）
   const [dynamicSteps, setDynamicSteps] = useState<PlanStep[]>([
-    { step: 1, name: '需求澄清', tool: 'WorkAgent', status: 'pending', category: 'agent' },
+    { step: 1, name: '需求澄清', tool: '管理智能体', status: 'pending', category: 'agent' },
     { step: 2, name: '数据采集', tool: 'WebCrawler Skill', status: 'pending', category: 'skill' },
     { step: 3, name: '价格分析', tool: 'PriceCompare Skill', status: 'pending', category: 'repo' },
     { step: 4, name: '智能化评估', tool: 'AIEval Skill', status: 'pending', category: 'agent' },
     { step: 5, name: '报告生成', tool: 'ReportGen Skill', status: 'pending', category: 'skill' },
   ]);
 
-  // Agent 编排链路（替代 Progress，展示每个 SubAgent 的职责与挂载 Skills）
+  // Agent 编排链路（替代 Progress，展示每个 数字员工 的职责与挂载 Skills）
   const [agentOrchestration] = useState<AgentOrchestrationNode[]>([
     {
       id: 'req-parser',
@@ -1781,7 +1614,7 @@ export default function TaskSpace({ project, task, onBack, onRename, onPin, onAr
       return {
         id: m.id,
         type,
-        senderName: m.senderName || m.senderId || 'WorkAgent',
+        senderName: m.senderName || m.senderId || '管理智能体',
         content: m.content,
         timestamp: m.timestamp,
         metadata: m.metadata,
@@ -1823,11 +1656,11 @@ export default function TaskSpace({ project, task, onBack, onRename, onPin, onAr
     client.on({
       onConnect: () => {
         setIsConnected(true);
-        console.log('[TaskSpace] Connected to WorkAgent backend');
+        console.log('[TaskSpace] Connected to 管理智能体 backend');
       },
       onDisconnect: () => {
         setIsConnected(false);
-        console.log('[TaskSpace] Disconnected from WorkAgent backend');
+        console.log('[TaskSpace] Disconnected from 管理智能体 backend');
       },
       onMessage: (msg) => {
         const taskMsg = convertAgentMessage(msg);
@@ -1889,7 +1722,7 @@ export default function TaskSpace({ project, task, onBack, onRename, onPin, onAr
             setMessages(prev => [...prev, {
               id: newId,
               type: 'workagent',
-              senderName: 'WorkAgent',
+              senderName: '管理智能体',
               content: chunk,
               timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
             }]);
@@ -1923,7 +1756,7 @@ export default function TaskSpace({ project, task, onBack, onRename, onPin, onAr
         setMessages(prev => [...prev, {
           id: `perm_${req.requestId}`,
           type: 'permission',
-          senderName: 'WorkAgent',
+          senderName: '管理智能体',
           content: req.description,
           timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
           metadata: { permissionType: req.type },
@@ -1975,7 +1808,7 @@ export default function TaskSpace({ project, task, onBack, onRename, onPin, onAr
     const round1Agent: TaskMessage = {
       id: `mock_${Date.now()}_r1`,
       type: 'workagent',
-      senderName: 'WorkAgent',
+      senderName: '管理智能体',
       content:
         `好的！我来帮你生成一个介绍柯布西耶的电子杂志风格 PPT。\n\n` +
         `在动手之前，让我先确认几个基本需求：\n\n` +
@@ -2037,7 +1870,7 @@ export default function TaskSpace({ project, task, onBack, onRename, onPin, onAr
     const round2Agent: TaskMessage = {
       id: `mock_${Date.now()}_r2`,
       type: 'workagent',
-      senderName: 'WorkAgent',
+      senderName: '管理智能体',
       content:
         `现在让我创建完整的15页柯布西耶PPT。我会：\n\n` +
         `1. 切换到沙丘主题色\n` +
@@ -2084,7 +1917,7 @@ export default function TaskSpace({ project, task, onBack, onRename, onPin, onAr
             const completionMsg: TaskMessage = {
               id: `mock_${Date.now()}_r3`,
               type: 'completion',
-              senderName: 'WorkAgent',
+              senderName: '管理智能体',
               content:
                 `柯布西耶 PPT 已生成完毕！`,
               timestamp: now(),

@@ -154,15 +154,15 @@ export default function BizAgentPanel({ activeView, selectedSkillId }: BizAgentP
           </div>
         )}
 
-        {/* ── Tools 视图 ── */}
-        {activeView === 'tools' && messages.length === 0 && (
+        {/* ── Connector 视图 ── */}
+        {activeView === 'connector' && messages.length === 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
             <Sparkles className="w-10 h-10 text-primary/30 mb-4" strokeWidth={1.2} />
             <h3 className="text-base font-semibold text-text tracking-tight mb-2">
-              连接你的工具
+              管理外部连接
             </h3>
             <p className="text-xs text-text-secondary leading-relaxed max-w-[220px]">
-              配置 MCP 连接器后，Agent 可以直接访问你的业务数据
+              配置 MCP、API 与数字员工连接，让 Agent 直接访问业务系统
             </p>
           </div>
         )}

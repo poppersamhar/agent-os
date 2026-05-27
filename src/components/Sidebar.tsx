@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Home, Wrench, Plug, ChevronDown, ChevronRight, Plus, ChevronLeft,
   PanelLeft, UserCog, Users, TrendingUp, Settings, LogOut,
-  Pin, MoreVertical, Pencil, Archive,
+  Pin, MoreVertical, Pencil, Archive, BookOpen,
 } from 'lucide-react';
 import type { AccountType, ViewType } from '../App';
 import type { Project, StandaloneTask } from '../data/mockData';
@@ -244,7 +244,8 @@ export default function Sidebar({
   const mainNav = [
     { key: 'home' as ViewType, label: '首页', icon: Home },
     { key: 'skill' as ViewType, label: 'Skills', icon: Wrench },
-    { key: 'tools' as ViewType, label: 'Tools', icon: Plug },
+    { key: 'connector' as ViewType, label: '连接器', icon: Plug },
+    { key: 'knowledge' as ViewType, label: '知识库', icon: BookOpen },
   ];
 
   const adminNav = [

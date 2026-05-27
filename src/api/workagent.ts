@@ -244,8 +244,22 @@ export async function listSkills(): Promise<Skill[]> {
   return data.data;
 }
 
-export async function listTools(): Promise<Array<{ name: string; description: string; category: string }>> {
-  const res = await fetch(`${API_BASE}/tools`);
+export async function listConnectors(): Promise<Array<{ name: string; description: string; category: string; type: string }>> {
+  const res = await fetch(`${API_BASE}/connectors`);
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+  return data.data;
+}
+
+export async function listKnowledgeSources(): Promise<Array<{ id: string; name: string; type: string; description: string; status: string; entries: number }>> {
+  const res = await fetch(`${API_BASE}/knowledge/sources`);
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+  return data.data;
+}
+
+export async function getKnowledgeGraph(): Promise<{ nodes: Array<{ id: string; label: string; type: string; detail: string }>; edges: Array<{ source: string; target: string }> }> {
+  const res = await fetch(`${API_BASE}/knowledge/graph`);
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;

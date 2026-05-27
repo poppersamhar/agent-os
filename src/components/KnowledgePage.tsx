@@ -1,41 +1,39 @@
 import { useState } from 'react';
 import {
-  Plus, Plug, Send, BrainCircuit, Sparkles,
+  Send, BrainCircuit, Sparkles, BookOpen, Database,
   CheckCircle2, XCircle, AlertCircle,
 } from 'lucide-react';
 import type { AccountType } from '../App';
+import KnowledgeGraph from './KnowledgeGraph';
 
-interface Tool {
+interface KnowledgeSource {
   id: string;
   name: string;
-  type: 'MCP' | 'API' | '其他';
+  type: '内部' | '第三方' | 'MCP' | 'API';
   description: string;
-  status: 'connected' | 'disconnected' | 'needs_reauth';
-  calls: number;
-  cost: string;
-  lastUsed: string;
+  status: 'connected' | 'disconnected';
+  entries: number;
 }
 
-const tools: Tool[] = [
-  { id: 't1', name: '企查查', type: 'MCP', description: '企业工商信息、信用数据查询', status: 'connected', calls: 142, cost: '$186', lastUsed: '2h ago' },
-  { id: 't2', name: 'Jira', type: 'API', description: '创建、查询、更新工单', status: 'disconnected', calls: 0, cost: '—', lastUsed: '—' },
-  { id: 't3', name: 'GitHub', type: 'API', description: '代码仓库、Issue、PR 管理', status: 'connected', calls: 156, cost: '—', lastUsed: '昨天' },
-  { id: 't4', name: 'Notion', type: 'API', description: '页面读写、数据库查询', status: 'needs_reauth', calls: 0, cost: '—', lastUsed: '3天前' },
-  { id: 't5', name: '企业搜索', type: 'MCP', description: '跨系统文档、邮件、聊天记录搜索', status: 'connected', calls: 3102, cost: '$24', lastUsed: '刚刚' },
-  { id: 't6', name: 'SMTP Server', type: '其他', description: '企业邮箱发送格式化邮件', status: 'connected', calls: 678, cost: '—', lastUsed: '1h ago' },
+const knowledgeSources: KnowledgeSource[] = [
+  { id: 'k1', name: '企业知识库', type: '内部', description: '规章制度、应急预案、技术文档', status: 'connected', entries: 1240 },
+  { id: 'k2', name: '项目知识沉淀', type: '内部', description: '所有项目任务上下文自动汇总', status: 'connected', entries: 356 },
+  { id: 'k3', name: '供应链数据库', type: '第三方', description: '供应商信息、合同数据', status: 'connected', entries: 89 },
+  { id: 'k4', name: '企查查 MCP', type: 'MCP', description: '企业工商信息、信用数据', status: 'connected', entries: 5600 },
+  { id: 'k5', name: '外部评级数据', type: 'API', description: '行业报告、评级数据', status: 'disconnected', entries: 0 },
+  { id: 'k6', name: '数字员工经验', type: '内部', description: 'Skill 执行日志与最佳实践', status: 'connected', entries: 2100 },
 ];
 
-interface ToolsPageProps {
+interface KnowledgePageProps {
   accountType: AccountType;
 }
 
-function ToolCard({ tool }: { tool: Tool }) {
+function KnowledgeSourceCard({ source }: { source: KnowledgeSource }) {
   const statusConfig = {
-    connected: { icon: CheckCircle2, color: 'text-success', bg: 'bg-success/10', label: '已连接' },
-    disconnected: { icon: XCircle, color: 'text-text-muted', bg: 'bg-text-muted/10', label: '未连接' },
-    needs_reauth: { icon: AlertCircle, color: 'text-warning', bg: 'bg-warning/10', label: '需重新授权' },
+    connected: { icon: CheckCircle2, color: 'text-success', bg: 'bg-success/10', label: '已接入' },
+    disconnected: { icon: XCircle, color: 'text-text-muted', bg: 'bg-text-muted/10', label: '未接入' },
   };
-  const cfg = statusConfig[tool.status];
+  const cfg = statusConfig[source.status];
   const StatusIcon = cfg.icon;
 
   return (
@@ -43,35 +41,26 @@ function ToolCard({ tool }: { tool: Tool }) {
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-bg flex items-center justify-center text-primary">
-            <Plug className="w-4 h-4" strokeWidth={1.5} />
+            <Database className="w-4 h-4" strokeWidth={1.5} />
           </div>
           <div>
-            <div className="text-[13px] font-medium text-text">{tool.name}</div>
-            <div className="text-[11px] text-text-muted">{tool.type}</div>
+            <div className="text-[13px] font-medium text-text">{source.name}</div>
+            <div className="text-[11px] text-text-muted">{source.type}</div>
           </div>
         </div>
         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1 ${cfg.bg} ${cfg.color}`}>
           <StatusIcon className="w-3 h-3" strokeWidth={2} /> {cfg.label}
         </span>
       </div>
-      <p className="text-[12px] text-text-secondary mb-3">{tool.description}</p>
-      <div className="flex items-center justify-between text-[11px] text-text-muted">
-        <span>本月调用 {tool.calls} 次{tool.cost !== '—' ? ` · 费用 ${tool.cost}` : ''}</span>
-        <span>上次使用 {tool.lastUsed}</span>
-      </div>
-      <div className="flex items-center gap-2 mt-3">
-        <button className="px-2.5 py-1 rounded-md border border-border hover:bg-bg text-[11px] text-text-secondary transition-colors">管理</button>
-        {tool.status === 'connected' ? (
-          <button className="px-2.5 py-1 rounded-md border border-border hover:bg-bg text-[11px] text-text-secondary transition-colors">断开</button>
-        ) : (
-          <button className="px-2.5 py-1 rounded-md bg-primary text-white hover:bg-primary-dark text-[11px] transition-colors">连接</button>
-        )}
+      <p className="text-[12px] text-text-secondary mb-2">{source.description}</p>
+      <div className="text-[11px] text-text-muted">
+        {source.entries > 0 ? `${source.entries.toLocaleString()} 条知识条目` : '暂无数据'}
       </div>
     </div>
   );
 }
 
-function HubAgentToolsPanel() {
+function OrgAgentKnowledgePanel() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ text: string; isUser: boolean }[]>([]);
 
@@ -88,10 +77,10 @@ function HubAgentToolsPanel() {
           <BrainCircuit className="w-[18px] h-[18px] text-primary-dark" strokeWidth={1.8} />
         </div>
         <div>
-          <h2 className="font-semibold text-text text-sm tracking-tight">HubAgent</h2>
+          <h2 className="font-semibold text-text text-sm tracking-tight">OrgAgent</h2>
           <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-dot" />
-            工具管理
+            知识库管理
           </div>
         </div>
       </div>
@@ -99,9 +88,9 @@ function HubAgentToolsPanel() {
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <Sparkles className="w-10 h-10 text-primary/30 mb-4" strokeWidth={1.2} />
-            <h3 className="text-base font-semibold text-text tracking-tight mb-2">工具管理中心</h3>
+            <h3 className="text-base font-semibold text-text tracking-tight mb-2">知识库管理中心</h3>
             <p className="text-xs text-text-secondary leading-relaxed max-w-[220px]">
-              告诉我你想连接什么工具，我可以帮你完成配置
+              问我任何问题，我可以帮你搜索知识库、生成培训材料或分析知识缺口
             </p>
           </div>
         ) : (
@@ -126,7 +115,7 @@ function HubAgentToolsPanel() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            placeholder="描述你想连接的工具..."
+            placeholder="搜索知识库或询问..."
             rows={1}
             className="flex-1 bg-transparent resize-none outline-none text-xs text-text py-1"
             style={{ minHeight: '20px' }}
@@ -140,26 +129,41 @@ function HubAgentToolsPanel() {
   );
 }
 
-export default function ToolsPage({ accountType }: ToolsPageProps) {
+export default function KnowledgePage({ accountType }: KnowledgePageProps) {
   const [filter, setFilter] = useState<string>('all');
 
-  const filtered = tools.filter(t => {
+  const filtered = knowledgeSources.filter(s => {
     if (filter === 'all') return true;
-    return t.type === filter;
+    return s.type === filter;
   });
 
   return (
     <div className="h-full flex">
-      {/* 左侧 Tool 列表 */}
+      {/* 左侧内容 */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-3xl">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-lg font-semibold text-text">Tools</h1>
-            <span className="text-[11px] text-text-muted">v0.2.0 支持添加工具</span>
+            <h1 className="text-lg font-semibold text-text">知识库</h1>
+            <span className="text-[11px] text-text-muted">全局知识资产总览</span>
           </div>
 
+          {/* 全局知识图谱 */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-primary" strokeWidth={1.5} />
+                <span className="text-[13px] font-medium text-text">全局知识图谱</span>
+              </div>
+              <span className="text-[10px] text-text-muted">双击节点查看详情 · 滚轮缩放 · 拖拽平移</span>
+            </div>
+            <div className="w-full aspect-[16/9] rounded-xl border border-primary/20 shadow-[0_8px_40px_rgba(0,0,0,0.08)] bg-white overflow-hidden">
+              <KnowledgeGraph />
+            </div>
+          </div>
+
+          {/* 筛选 */}
           <div className="flex items-center gap-2 mb-4">
-            {['all', 'MCP', 'API', '其他'].map(f => (
+            {['all', '内部', '第三方', 'MCP', 'API'].map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -170,17 +174,18 @@ export default function ToolsPage({ accountType }: ToolsPageProps) {
             ))}
           </div>
 
+          {/* 知识源列表 */}
           <div className="grid grid-cols-2 gap-3">
-            {filtered.map(tool => (
-              <ToolCard key={tool.id} tool={tool} />
+            {filtered.map(source => (
+              <KnowledgeSourceCard key={source.id} source={source} />
             ))}
           </div>
         </div>
       </div>
 
-      {/* 右侧 HubAgent */}
+      {/* 右侧 OrgAgent */}
       <div className="w-[380px] shrink-0 pt-12 pr-4 pb-14">
-        <HubAgentToolsPanel />
+        <OrgAgentKnowledgePanel />
       </div>
     </div>
   );

@@ -5,13 +5,14 @@ import Dashboard from './components/Dashboard';
 
 import SkillPage from './components/SkillPage';
 import NewTaskPage from './components/NewTaskPage';
-import ToolsPage from './components/ToolsPage';
+import ConnectorPage from './components/ConnectorPage';
+import KnowledgePage from './components/KnowledgePage';
 import ProjectView from './components/ProjectView';
 import TaskSpace from './components/TaskSpace';
 import { workLines, standaloneTasks, currentUserId, type Project, type StandaloneTask } from './data/mockData';
 
 export type AccountType = 'member' | 'admin';
-export type ViewType = 'home' | 'skill' | 'tools' | 'project' | 'task' | 'newtask' | 'settings';
+export type ViewType = 'home' | 'skill' | 'connector' | 'knowledge' | 'project' | 'task' | 'newtask' | 'settings';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -61,7 +62,7 @@ function App() {
     setActiveView(view);
     if (projectId !== undefined) setActiveProjectId(projectId);
     if (taskId !== undefined) setActiveTaskId(taskId);
-    if (view === 'home' || view === 'skill' || view === 'tools' || view === 'newtask' || view === 'settings') {
+    if (view === 'home' || view === 'skill' || view === 'connector' || view === 'knowledge' || view === 'newtask' || view === 'settings') {
       setActiveProjectId(null);
       setActiveTaskId(null);
     }
@@ -168,9 +169,9 @@ function App() {
     }
   };
 
-  // 滚轮切换 home/skill/tools
+  // 滚轮切换 home/skill/connector
   useEffect(() => {
-    const scrollViews: ViewType[] = ['home', 'skill', 'tools'];
+    const scrollViews: ViewType[] = ['home', 'skill', 'connector', 'knowledge'];
     const handler = (e: WheelEvent) => {
       if (!scrollViews.includes(activeView)) return;
       const idx = scrollViews.indexOf(activeView);
@@ -225,8 +226,11 @@ function App() {
         {activeView === 'skill' && (
           <SkillPage accountType={accountType} />
         )}
-        {activeView === 'tools' && (
-          <ToolsPage accountType={accountType} />
+        {activeView === 'connector' && (
+          <ConnectorPage accountType={accountType} />
+        )}
+        {activeView === 'knowledge' && (
+          <KnowledgePage accountType={accountType} />
         )}
         {activeView === 'newtask' && (
           <NewTaskPage

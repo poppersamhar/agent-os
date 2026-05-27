@@ -175,8 +175,8 @@ export const projects = workLines;
 
 export const agents: Agent[] = [
   {
-    id: 'a_workagent', name: 'WorkAgent', avatar: '🤖', domain: 'analysis',
-    description: '任务编排与调度中枢，负责需求解析、方案规划和结果汇总',
+    id: 'a_workagent', name: '管理智能体', avatar: '🤖', domain: 'analysis',
+    description: '任务编排与调度中枢（管理智能体），负责需求解析、方案规划和结果汇总',
     status: 'online', calls: 3280, mountedSkills: ['s_market', 's_compete', 's_report'],
     workLine: '供应链金融风控平台',
     recentOutputs: [
@@ -185,8 +185,8 @@ export const agents: Agent[] = [
     ],
   },
   {
-    id: 'a_dataclean', name: '数据清洗 Agent', avatar: '🧹', domain: 'governance',
-    description: '数据质量校验、缺失值处理、异常检测与标准化转换',
+    id: 'a_dataclean', name: '数据清洗 数字员工', avatar: '🧹', domain: 'governance',
+    description: '数据质量校验、缺失值处理、异常检测与标准化转换（数字员工）',
     status: 'online', calls: 1560, mountedSkills: ['s_sql', 's_python'],
     workLine: '供应链金融风控平台',
     recentOutputs: [
@@ -194,8 +194,8 @@ export const agents: Agent[] = [
     ],
   },
   {
-    id: 'a_credit', name: '信用评估 Agent', avatar: '📊', domain: 'analysis',
-    description: '多维度信用评分计算、风险分级、尽调报告生成',
+    id: 'a_credit', name: '信用评估 数字员工', avatar: '📊', domain: 'analysis',
+    description: '多维度信用评分计算、风险分级、尽调报告生成（数字员工）',
     status: 'online', calls: 890, mountedSkills: ['s_credit', 's_python', 's_chart'],
     workLine: '供应链金融风控平台',
     recentOutputs: [
@@ -203,8 +203,8 @@ export const agents: Agent[] = [
     ],
   },
   {
-    id: 'a_ml', name: '模型优化 Agent', avatar: '🧠', domain: 'analysis',
-    description: '特征工程、模型调参、A/B测试、性能评估',
+    id: 'a_ml', name: '模型优化 数字员工', avatar: '🧠', domain: 'analysis',
+    description: '特征工程、模型调参、A/B测试、性能评估（数字员工）',
     status: 'online', calls: 670, mountedSkills: ['s_python', 's_chart'],
     workLine: '供应链金融风控平台',
     recentOutputs: [
@@ -1281,9 +1281,9 @@ export const taskFlow = [
 ];
 
 export const activeAgents = [
-  { id: 'a_workagent', name: 'WorkAgent', role: 'host' as const, status: 'running' as const, currentTask: '任务编排' },
-  { id: 'a_dataclean', name: '数据清洗 Agent', role: 'agent' as const, status: 'idle' as const, currentTask: '等待调度' },
-  { id: 'a_credit', name: '信用评估 Agent', role: 'agent' as const, status: 'idle' as const, currentTask: '等待调度' },
+  { id: 'a_workagent', name: '管理智能体', role: 'host' as const, status: 'running' as const, currentTask: '任务编排' },
+  { id: 'a_dataclean', name: '数据清洗 数字员工', role: 'agent' as const, status: 'idle' as const, currentTask: '等待调度' },
+  { id: 'a_credit', name: '信用评估 数字员工', role: 'agent' as const, status: 'idle' as const, currentTask: '等待调度' },
 ];
 
 export const auditLogs = [

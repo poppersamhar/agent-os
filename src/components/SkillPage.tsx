@@ -137,8 +137,8 @@ function ImportSkillMenu({ onImportLocal, onImportGitHub }: {
   );
 }
 
-/* ─── HubAgent 面板（AgentPanel 玻璃态样式） ─── */
-function HubAgentSkillPanel() {
+/* ─── OrgAgent 面板（AgentPanel 玻璃态样式） ─── */
+function OrgAgentSkillPanel() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ text: string; isUser: boolean }[]>([]);
 
@@ -155,7 +155,7 @@ function HubAgentSkillPanel() {
           <BrainCircuit className="w-[18px] h-[18px] text-primary-dark" strokeWidth={1.8} />
         </div>
         <div>
-          <h2 className="font-semibold text-text text-sm tracking-tight">HubAgent</h2>
+          <h2 className="font-semibold text-text text-sm tracking-tight">OrgAgent</h2>
           <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-dot" />
             Skill 管理
@@ -272,9 +272,9 @@ export default function SkillPage({ accountType }: SkillPageProps) {
         </div>
       </div>
 
-      {/* 右侧 HubAgent */}
+      {/* 右侧 OrgAgent */}
       <div className="w-[380px] shrink-0 pt-12 pr-4 pb-14">
-        <HubAgentSkillPanel />
+        <OrgAgentSkillPanel />
       </div>
     </div>
   );

@@ -69,11 +69,11 @@ function TaskTreePanel({ taskId }: { taskId: string }) {
       </div>
       {expanded && (
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          {/* MyAgent 协调 */}
+          {/* 管理智能体 协调 */}
           <div className="mb-3">
             <div className="flex items-center gap-2 mb-2">
               <BotAvatar />
-              <span className="text-[12px] font-medium text-text">MyAgent</span>
+              <span className="text-[12px] font-medium text-text">管理智能体</span>
               <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-dot" />
               <span className="text-[10px] text-text-muted">协调中</span>
             </div>
@@ -212,7 +212,7 @@ function RightPanel({ taskId }: { taskId: string }) {
   );
 }
 
-/* ─── Sub-Agent 分身折叠卡片 ─── */
+/* ─── 数字员工 分身折叠卡片 ─── */
 function SubAgentCard({ name, content, duration, onExpand }: { name: string; content: string; duration: string; onExpand?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -354,7 +354,7 @@ function MessageBubble({ msg, selectedDataItemId, onSelectDataItem }: {
     );
   }
 
-  // MyAgent / Agent / Skill 消息
+  // 管理智能体 / Agent / Skill 消息
   return (
     <div className="flex gap-3" data-message-id={msg.id}>
       {isHost ? <BotAvatar /> : (
@@ -365,7 +365,7 @@ function MessageBubble({ msg, selectedDataItemId, onSelectDataItem }: {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
           <span className="text-[11px] font-medium text-text">{msg.senderName}</span>
-          {msg.senderName === 'MyAgent' && <span className="text-[10px] text-text-muted">· 代 samhar 发布</span>}
+          {msg.senderName === '管理智能体' && <span className="text-[10px] text-text-muted">· 代 samhar 发布</span>}
         </div>
         <div className="text-[13px] text-text leading-relaxed whitespace-pre-wrap">
           {msg.content}
@@ -426,7 +426,7 @@ export default function GroupChatPage({ chatName, messages, taskId = 't1' }: Gro
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[11px] text-text-muted">
-            由 samhar 通过 MyAgent 创建 · 2024-01-15 14:20
+            由 samhar 通过 管理智能体 创建 · 2024-01-15 14:20
           </span>
           <button className="text-[11px] text-primary hover:underline">直接联系 samhar →</button>
           <button
@@ -443,12 +443,12 @@ export default function GroupChatPage({ chatName, messages, taskId = 't1' }: Gro
         {/* 消息区 */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-            {/* MyAgent 首条任务消息 */}
+            {/* 管理智能体 首条任务消息 */}
             <div className="flex gap-3">
               <BotAvatar />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[11px] font-medium text-text">MyAgent</span>
+                  <span className="text-[11px] font-medium text-text">管理智能体</span>
                   <span className="text-[10px] text-text-muted">· 代 samhar 发布</span>
                 </div>
                 <div className="text-[13px] text-text leading-relaxed whitespace-pre-wrap">
@@ -498,7 +498,7 @@ export default function GroupChatPage({ chatName, messages, taskId = 't1' }: Gro
               </div>
             </div>
 
-            {/* Sub-Agent 卡片示例 */}
+            {/* 数字员工 卡片示例 */}
             <SubAgentCard
               name="数据清洗"
               content="处理了 47 家供应商数据，发现异常 2 处。天合光能 Q1-Q3 数据存在缺口，已标注。"

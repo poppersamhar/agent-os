@@ -7,8 +7,6 @@ import {
 } from 'lucide-react';
 import type { AccountType, ViewType } from '../App';
 import type { Project, Chat } from '../data/mockData';
-import KnowledgeGraph from './KnowledgeGraph';
-
 interface ProjectViewProps {
   accountType: AccountType;
   project: Project;
@@ -19,10 +17,10 @@ interface ProjectViewProps {
   onArchiveTask: (taskId: string) => void;
 }
 
-type ProjectTab = 'tasks' | 'files' | 'data' | 'graph';
+type ProjectTab = 'tasks' | 'files';
 
-/* ─── WorkAgent 面板（AgentPanel 玻璃态样式） ─── */
-function WorkAgentPanel({ projectName }: { projectName: string }) {
+/* ─── 管理智能体 面板（AgentPanel 玻璃态样式） ─── */
+function 管理智能体Panel({ projectName }: { projectName: string }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ text: string; isUser: boolean }[]>([]);
 
@@ -39,7 +37,7 @@ function WorkAgentPanel({ projectName }: { projectName: string }) {
           <BrainCircuit className="w-[18px] h-[18px] text-primary-dark" strokeWidth={1.8} />
         </div>
         <div>
-          <h2 className="font-semibold text-text text-sm tracking-tight">WorkAgent</h2>
+          <h2 className="font-semibold text-text text-sm tracking-tight">管理智能体</h2>
           <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-dot" />
             {projectName}
@@ -77,7 +75,7 @@ function WorkAgentPanel({ projectName }: { projectName: string }) {
             <div className="flex gap-2.5 mb-3">
               <div className="w-6 h-6 rounded-full bg-primary-subtle flex items-center justify-center text-[10px] font-bold text-primary-dark shrink-0 mt-0.5">W</div>
               <div className="bg-bg rounded-2xl rounded-tl-sm px-4 py-2.5 text-[12px] text-text-secondary border border-border-light max-w-[85%]">
-                项目当前状态：\n· 财报分析正在执行\n  Sub-Agent 处理第 3/5 步\n· 供应商评估等待审批
+                项目当前状态：\n· 财报分析正在执行\n  数字员工 处理第 3/5 步\n· 供应商评估等待审批
               </div>
             </div>
           </div>
@@ -103,7 +101,7 @@ function WorkAgentPanel({ projectName }: { projectName: string }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            placeholder="问 WorkAgent..."
+            placeholder="问 管理智能体..."
             rows={1}
             className="flex-1 bg-transparent resize-none outline-none text-xs text-text py-1"
             style={{ minHeight: '20px' }}
@@ -281,40 +279,6 @@ function FilesTab({ project }: { project: Project }) {
   );
 }
 
-/* ─── 知识库 Tab（原数据） ─── */
-function KnowledgeBaseTab() {
-  const sources = [
-    { name: '企业知识库', type: '内部', status: 'connected', icon: 'DB' },
-    { name: '供应链数据库', type: '第三方', status: 'connected', icon: 'SQL' },
-    { name: '企查查 API', type: 'MCP', status: 'connected', icon: 'API' },
-    { name: '外部评级数据', type: 'API', status: 'disconnected', icon: 'EXT' },
-  ];
-  return (
-    <div className="rounded-xl border border-primary/20 shadow-[0_8px_40px_rgba(0,0,0,0.08)] bg-white p-3">
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[13px] font-medium text-text">知识库</span>
-        <span className="text-[10px] text-text-muted">API 接入</span>
-      </div>
-      <div className="space-y-2">
-        {sources.map((s, i) => (
-          <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-bg transition-colors">
-            <div className="w-6 h-6 rounded bg-primary/5 flex items-center justify-center shrink-0">
-              <span className="text-[7px] text-text-muted font-medium">{s.icon}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[12px] text-text truncate">{s.name}</div>
-              <div className="text-[10px] text-text-muted">{s.type}</div>
-            </div>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded ${s.status === 'connected' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'}`}>
-              {s.status === 'connected' ? '已连接' : '未连接'}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function ProjectView({ accountType, project, onNavigate, onCreateTask, onRenameTask, onPinTask, onArchiveTask }: ProjectViewProps) {
   const [tab, setTab] = useState<ProjectTab>('tasks');
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -323,8 +287,6 @@ export default function ProjectView({ accountType, project, onNavigate, onCreate
   const tabs: { key: ProjectTab; label: string }[] = [
     { key: 'tasks', label: '任务' },
     { key: 'files', label: '文件' },
-    { key: 'data', label: '知识库' },
-    { key: 'graph', label: '项目图谱' },
   ];
 
   return (
@@ -387,17 +349,11 @@ export default function ProjectView({ accountType, project, onNavigate, onCreate
           )}
 
           {tab === 'files' && <FilesTab project={project} />}
-          {tab === 'data' && <KnowledgeBaseTab />}
-          {tab === 'graph' && (
-            <div className="w-full aspect-square rounded-xl border border-border-light bg-white overflow-hidden">
-              <KnowledgeGraph projectId={project.id} />
-            </div>
-          )}
       </div>
 
-      {/* 右侧 WorkAgent */}
+      {/* 右侧 管理智能体 */}
       <div className="w-[380px] shrink-0 pt-12 pr-4 pb-14">
-        <WorkAgentPanel projectName={project.name} />
+        <管理智能体Panel projectName={project.name} />
       </div>
 
       {/* 新建任务 Modal */}

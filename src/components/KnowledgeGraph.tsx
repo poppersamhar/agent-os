@@ -53,9 +53,9 @@ interface GraphEdge {
   target: string;
 }
 
-function buildGraph(projectId: string, taskId?: string | null) {
-  const project = projects.find((p) => p.id === projectId);
-  const standaloneTask = standaloneTasks.find((t) => t.id === projectId);
+function buildGraph(projectId?: string | null, taskId?: string | null) {
+  const project = projectId ? projects.find((p) => p.id === projectId) : undefined;
+  const standaloneTask = projectId ? standaloneTasks.find((t) => t.id === projectId) : undefined;
 
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
@@ -68,6 +68,68 @@ function buildGraph(projectId: string, taskId?: string | null) {
     floatSpeed: 0.0004 + Math.random() * 0.0008,
     layer, detail, meta,
   });
+
+  // ── Global graph (no projectId) ──
+  if (!projectId) {
+    nodes.push(makeNode('global-center', '组织知识图谱', 'core_entity', 18, 6, 0, '全组织知识资产总览'));
+
+    // 所有项目
+    projects.forEach((p, i) => {
+      const pid = `proj-${p.id}`;
+      nodes.push(makeNode(pid, p.name, 'property', 10, 2.5, 1, `项目 · ${p.memberCount} 成员`, { 任务数: String(p.chats.length) }));
+      edges.push({ source: 'global-center', target: pid });
+      inc('global-center'); inc(pid);
+    });
+
+    // 独立任务
+    standaloneTasks.slice(0, 4).forEach((t, i) => {
+      const tid = `st-${t.id}`;
+      nodes.push(makeNode(tid, t.name, 'property', 9, 2, 1, '独立任务'));
+      edges.push({ source: 'global-center', target: tid });
+      inc('global-center'); inc(tid);
+    });
+
+    // Agent 类型聚合
+    const agentTypes = [
+      { id: 'agent-workagent', name: '管理智能体', detail: '任务编排与调度' },
+      { id: 'agent-sub', name: '数字员工', detail: '原子任务执行' },
+      { id: 'agent-org', name: '企业效能管理智能体', detail: '组织级效能管理' },
+    ];
+    agentTypes.forEach((a) => {
+      nodes.push(makeNode(a.id, a.name, 'property', 9, 2, 1, a.detail));
+      edges.push({ source: 'global-center', target: a.id });
+      inc('global-center'); inc(a.id);
+    });
+
+    // Skills
+    skills.slice(0, 8).forEach((s) => {
+      nodes.push(makeNode(s.id, s.name, 'leaf', 6.5, 1.3, 2, s.description, { 类别: s.category, 作者: s.author }));
+      edges.push({ source: 'global-center', target: s.id });
+      inc('global-center'); inc(s.id);
+    });
+
+    // 关键洞察
+    const insights = [
+      { id: 'insight-1', text: '12 个活跃项目', detail: '本季度知识沉淀' },
+      { id: 'insight-2', text: '86 个 Skills', detail: '可复用能力资产' },
+      { id: 'insight-3', text: '3 层记忆架构', detail: '任务→项目→全局' },
+      { id: 'insight-4', text: '98.5% 成功率', detail: '数字员工执行' },
+    ];
+    insights.forEach((kp) => {
+      nodes.push(makeNode(kp.id, kp.text, 'leaf', 6, 1.2, 2, kp.detail));
+      edges.push({ source: 'global-center', target: kp.id });
+      inc('global-center'); inc(kp.id);
+    });
+
+    nodes.forEach((n) => {
+      const d = degree.get(n.id) || 0;
+      if (d >= 6) n.radius = 16;
+      else if (d >= 4) n.radius = 11;
+      else if (d >= 2) n.radius = 8;
+    });
+
+    return { nodes, edges };
+  }
 
   // ── Standalone task graph ──
   if (!project && standaloneTask) {
@@ -277,7 +339,7 @@ export default function KnowledgeGraph({
   projectId,
   excludeRectRef,
 }: {
-  projectId: string;
+  projectId?: string;
   excludeRectRef?: React.RefObject<ExcludeRect | null>;
 }) {
   const { themeColor } = useTheme();
@@ -319,9 +381,9 @@ export default function KnowledgeGraph({
     offsetYRef.current = 0;
   }, [projectId, currentLevel, selectedTaskId]);
 
-  const project = projects.find((p) => p.id === projectId);
-  const standaloneTask = standaloneTasks.find((t) => t.id === projectId);
-  const displayName = project?.name || standaloneTask?.name || '';
+  const project = projectId ? projects.find((p) => p.id === projectId) : undefined;
+  const standaloneTask = projectId ? standaloneTasks.find((t) => t.id === projectId) : undefined;
+  const displayName = project?.name || standaloneTask?.name || '全局知识图谱';
 
   useEffect(() => {
     const taskId = currentLevel === 'task' ? selectedTaskId : null;
