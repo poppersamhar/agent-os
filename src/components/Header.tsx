@@ -9,7 +9,7 @@ interface HeaderProps {
 const viewTitles: Record<string, string> = {
   home: '主页',
   agent: '数字员工',
-  skill: 'Skills',
+  skill: '技能市场',
   'project-wizard': '新建项目',
 };
 

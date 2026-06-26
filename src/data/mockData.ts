@@ -149,7 +149,7 @@ export type UserRole = 'member' | 'admin';
 export const currentUserId = 'user-samhar';
 
 /* ═══════════════════════════════════════════════
-   项目数据（仅保留 1 个 B 端项目）
+   项目数据
    ═══════════════════════════════════════════════ */
 
 export const workLines: WorkLine[] = [
@@ -163,6 +163,30 @@ export const workLines: WorkLine[] = [
     status: 'active',
     icon: 'shield',
     createdBy: 'user-samhar',
+    chats: [],
+  },
+  {
+    id: 'p_brand_contract',
+    name: '品牌升级 · Q3 营销合同',
+    description: '围绕品牌升级项目整理合同条款、审批节点、供应商协作和交付边界',
+    updatedAt: '12分钟前',
+    memberCount: 5,
+    unread: false,
+    status: 'active',
+    icon: 'briefcase',
+    createdBy: 'user-samhar',
+    chats: [],
+  },
+  {
+    id: 'p_data_middle',
+    name: '数据中台 · 清洗建模',
+    description: '建设跨部门数据清洗、指标口径统一和模型训练前的数据治理作战室',
+    updatedAt: '今天',
+    memberCount: 4,
+    unread: false,
+    status: 'active',
+    icon: 'database',
+    createdBy: 'user-lixue',
     chats: [],
   },
 ];

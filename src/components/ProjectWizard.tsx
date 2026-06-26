@@ -20,7 +20,10 @@ export default function ProjectWizard({ onCreateProject, onCancel }: ProjectWiza
       <div className="bg-white rounded-2xl shadow-xl w-[480px] max-w-[90vw] overflow-hidden animate-fade-in border border-border/50">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
-          <h3 className="font-semibold text-text text-base">新建项目</h3>
+          <div>
+            <h3 className="font-semibold text-text text-base">新建项目</h3>
+            <p className="mt-1 text-[11px] text-text-muted">创建后你会成为此项目负责人，可拉成员并分发任务。</p>
+          </div>
           <button
             onClick={onCancel}
             className="p-1 hover:bg-bg rounded-lg transition-colors text-text-muted"
@@ -49,7 +52,7 @@ export default function ProjectWizard({ onCreateProject, onCancel }: ProjectWiza
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              placeholder="描述项目的内容。详细的描述有助于 AI 更好地访问项目。"
+              placeholder="描述项目目标、资料背景和希望 ProjectAgent 帮你拆解的方向。"
               rows={3}
               className="w-full bg-bg border border-border rounded-xl px-3 py-2.5 text-sm text-text placeholder:text-text-muted outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/5 transition-all resize-none"
             />

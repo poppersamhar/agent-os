@@ -1,18 +1,34 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 
 import SkillPage from './components/SkillPage';
-import NewTaskPage from './components/NewTaskPage';
 import ConnectorPage from './components/ConnectorPage';
 import KnowledgePage from './components/KnowledgePage';
+import ProjectOverview from './components/ProjectOverview';
 import ProjectView from './components/ProjectView';
-import TaskSpace from './components/TaskSpace';
+import ProjectWizard from './components/ProjectWizard';
+import PersonalAgentDeskPet from './components/PersonalAgentDeskPet';
 import { workLines, standaloneTasks, currentUserId, type Project, type StandaloneTask } from './data/mockData';
 
 export type AccountType = 'member' | 'admin';
 export type ViewType = 'home' | 'skill' | 'connector' | 'knowledge' | 'project' | 'task' | 'newtask' | 'settings';
+export type SpaceResultNotification = {
+  projectId: string;
+  projectName: string;
+  title: string;
+  summary: string;
+  receivedAt: string;
+};
+
+const spaceResultNotification: SpaceResultNotification = {
+  projectId: 'p_data_middle',
+  projectName: '数据中台 · 清洗建模',
+  title: 'Space 执行结果已回传',
+  summary: '清洗质量报告、异常字段清单和建模输入表已完成回传。',
+  receivedAt: '刚刚',
+};
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -21,18 +37,24 @@ function App() {
   const [accountType, setAccountType] = useState<AccountType>(() => {
     return (localStorage.getItem('agent_os_account_type') as AccountType) || 'member';
   });
+  const [dashboardScope, setDashboardScope] = useState<AccountType>(() => {
+    return (localStorage.getItem('agent_os_dashboard_scope') as AccountType) || 'member';
+  });
   const [activeView, setActiveView] = useState<ViewType>('home');
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [projectList, setProjectList] = useState<Project[]>(workLines);
   const [standaloneTaskList, setStandaloneTaskList] = useState<StandaloneTask[]>(standaloneTasks);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showProjectWizard, setShowProjectWizard] = useState(false);
 
   const handleLogin = (type: AccountType) => {
     setIsLoggedIn(true);
     setAccountType(type);
+    setDashboardScope(type);
     localStorage.setItem('agent_os_logged_in', 'true');
     localStorage.setItem('agent_os_account_type', type);
+    localStorage.setItem('agent_os_dashboard_scope', type);
     setActiveView('home');
     setActiveProjectId(null);
     setActiveTaskId(null);
@@ -44,13 +66,9 @@ function App() {
     localStorage.removeItem('agent_os_account_type');
   };
 
-  const handleSwitchAccount = () => {
-    const newType = accountType === 'admin' ? 'member' : 'admin';
-    setAccountType(newType);
-    localStorage.setItem('agent_os_account_type', newType);
-    setActiveView('home');
-    setActiveProjectId(null);
-    setActiveTaskId(null);
+  const handleDashboardScopeChange = (scope: AccountType) => {
+    setDashboardScope(scope);
+    localStorage.setItem('agent_os_dashboard_scope', scope);
   };
 
   const handleNavigate = useCallback((view: ViewType, projectId?: string, taskId?: string) => {
@@ -59,14 +77,36 @@ function App() {
       setActiveView('home');
       return;
     }
+    if (view === 'newtask') {
+      setActiveView('home');
+      setActiveProjectId(null);
+      setActiveTaskId(null);
+      return;
+    }
+    if (view === 'task') {
+      if (projectId) {
+        setActiveView('project');
+        setActiveProjectId(projectId);
+      } else {
+        setActiveView('home');
+        setActiveProjectId(null);
+      }
+      setActiveTaskId(null);
+      return;
+    }
+    if (view === 'project') {
+      setActiveView('project');
+      setActiveProjectId(projectId ?? null);
+      setActiveTaskId(null);
+      return;
+    }
     setActiveView(view);
     if (projectId !== undefined) setActiveProjectId(projectId);
     if (taskId !== undefined) setActiveTaskId(taskId);
-    if (view === 'home' || view === 'skill' || view === 'connector' || view === 'knowledge' || view === 'newtask' || view === 'settings') {
+    if (view === 'home' || view === 'skill' || view === 'connector' || view === 'knowledge' || view === 'settings') {
       setActiveProjectId(null);
       setActiveTaskId(null);
     }
-    if (view === 'project') setActiveTaskId(null);
   }, [accountType]);
 
   const handleCreateProject = (name: string, description: string) => {
@@ -169,22 +209,6 @@ function App() {
     }
   };
 
-  // 滚轮切换 home/skill/connector
-  useEffect(() => {
-    const scrollViews: ViewType[] = ['home', 'skill', 'connector', 'knowledge'];
-    const handler = (e: WheelEvent) => {
-      if (!scrollViews.includes(activeView)) return;
-      const idx = scrollViews.indexOf(activeView);
-      if (e.deltaY > 30 && idx < scrollViews.length - 1) {
-        setActiveView(scrollViews[idx + 1]);
-      } else if (e.deltaY < -30 && idx > 0) {
-        setActiveView(scrollViews[idx - 1]);
-      }
-    };
-    window.addEventListener('wheel', handler, { passive: true });
-    return () => window.removeEventListener('wheel', handler);
-  }, [activeView]);
-
   const activeProject = activeProjectId ? projectList.find(p => p.id === activeProjectId) || null : null;
   // 先从项目中查找任务，找不到则从独立任务中查找
   const activeTaskFromProject = activeProject?.chats.find(c => c.id === activeTaskId);
@@ -202,14 +226,14 @@ function App() {
         activeView={activeView}
         activeProjectId={activeProjectId}
         activeTaskId={activeTaskId}
-        projectList={projectList.filter(p => p.createdBy === currentUserId)}
+        projectList={projectList}
+        spaceResultProjectId={spaceResultNotification.projectId}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         onNavigate={handleNavigate}
         onCreateProject={handleCreateProject}
         onCreateStandaloneTask={handleCreateStandaloneTask}
         onLogout={handleLogout}
-        onSwitchAccount={handleSwitchAccount}
         onRenameTask={handleRenameTask}
         onPinTask={handlePinTask}
         onArchiveTask={handleArchiveTask}
@@ -220,7 +244,7 @@ function App() {
       />
       <main className="flex-1 min-w-0 overflow-hidden bg-main-bg">
         {activeView === 'home' && (
-          <Dashboard accountType={accountType} />
+          <Dashboard accountType={dashboardScope} onAccountTypeChange={handleDashboardScopeChange} />
         )}
 
         {activeView === 'skill' && (
@@ -232,32 +256,24 @@ function App() {
         {activeView === 'knowledge' && (
           <KnowledgePage accountType={accountType} />
         )}
-        {activeView === 'newtask' && (
-          <NewTaskPage
-            onCreateStandaloneTask={handleCreateStandaloneTask}
+        {activeView === 'project' && !activeProject && (
+          <ProjectOverview
+            projects={projectList}
+            currentUserId={currentUserId}
+            onCreateProject={() => setShowProjectWizard(true)}
+            onOpenProject={(projectId) => handleNavigate('project', projectId)}
           />
         )}
         {activeView === 'project' && activeProject && (
           <ProjectView
             accountType={accountType}
             project={activeProject}
+            currentUserId={currentUserId}
             onNavigate={handleNavigate}
             onCreateTask={handleCreateTask}
             onRenameTask={handleRenameTask}
             onPinTask={handlePinTask}
             onArchiveTask={handleArchiveTask}
-          />
-        )}
-        {activeView === 'task' && activeTask && (
-          <TaskSpace
-            key={activeTask.id}
-            accountType={accountType}
-            project={activeProject}
-            task={activeTask}
-            onBack={() => activeProject ? handleNavigate('project', activeProject.id) : handleNavigate('home')}
-            onRename={handleRenameTask}
-            onPin={handlePinTask}
-            onArchive={handleArchiveTask}
           />
         )}
         {activeView === 'settings' && accountType === 'admin' && (
@@ -266,6 +282,20 @@ function App() {
           </div>
         )}
       </main>
+      <PersonalAgentDeskPet
+        accountType={accountType}
+        notification={spaceResultNotification}
+        onOpenNotification={() => handleNavigate('project', spaceResultNotification.projectId)}
+      />
+      {showProjectWizard && (
+        <ProjectWizard
+          onCreateProject={(name, description) => {
+            handleCreateProject(name, description);
+            setShowProjectWizard(false);
+          }}
+          onCancel={() => setShowProjectWizard(false)}
+        />
+      )}
     </div>
   );
 }

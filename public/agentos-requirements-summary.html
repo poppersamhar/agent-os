@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentOS 需求文档｜三位一体产品矩阵与 Agent 协同设计</title>
+  <style>
+    :root {
+      --bg: #f6f6f5;
+      --paper: #ffffff;
+      --ink: #171717;
+      --muted: #737373;
+      --soft: #a3a3a3;
+      --line: #e7e5e4;
+      --line-strong: #d6d3d1;
+      --panel: #fafafa;
+      --dark: #111111;
+      --green: #0f766e;
+      --amber: #a16207;
+      --blue: #1d4ed8;
+      --red: #b91c1c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.65;
+    }
+
+    main {
+      width: min(1120px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 56px 0 72px;
+    }
+
+    .hero {
+      padding: 48px 48px 42px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--paper);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.06);
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 900px;
+      font-size: 40px;
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      max-width: 880px;
+      margin: 20px 0 0;
+      color: #404040;
+      font-size: 16px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      height: 30px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: #404040;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    section {
+      margin-top: 24px;
+      padding: 34px 36px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+
+    .section-desc {
+      max-width: 660px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card {
+      min-height: 100%;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+    }
+
+    .card.dark {
+      background: var(--dark);
+      color: #ffffff;
+      border-color: var(--dark);
+    }
+
+    .card.dark p,
+    .card.dark .small {
+      color: #d4d4d4;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      margin-bottom: 12px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: #efefef;
+      color: #404040;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .tag.green {
+      background: #ecfdf5;
+      color: var(--green);
+    }
+
+    .tag.blue {
+      background: #eff6ff;
+      color: var(--blue);
+    }
+
+    .tag.amber {
+      background: #fffbeb;
+      color: var(--amber);
+    }
+
+    .tag.red {
+      background: #fef2f2;
+      color: var(--red);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    th {
+      background: #fafafa;
+      color: #404040;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .flow-node {
+      position: relative;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .flow-node:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -9px;
+      width: 8px;
+      height: 1px;
+      background: var(--line-strong);
+    }
+
+    .flow-node strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .flow-node span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .protocol {
+      padding: 18px;
+      border-radius: 12px;
+      background: #111111;
+      color: #eeeeee;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.65;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .list {
+      margin: 0;
+      padding-left: 18px;
+      color: #404040;
+      font-size: 14px;
+    }
+
+    .list li + li {
+      margin-top: 6px;
+    }
+
+    .callout {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 20px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fafafa;
+    }
+
+    .callout strong {
+      font-size: 14px;
+    }
+
+    .divider {
+      height: 1px;
+      margin: 22px 0;
+      background: var(--line);
+    }
+
+    footer {
+      margin-top: 24px;
+      padding: 24px 4px 0;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        width: min(100% - 24px, 1120px);
+        padding-top: 24px;
+      }
+
+      .hero,
+      section {
+        padding: 24px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .grid-3,
+      .grid-2,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-node::after {
+        display: none;
+      }
+
+      .callout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="hero">
+      <p class="eyebrow">AgentOS Requirement Brief · v0.3</p>
+      <h1>AgentOS 是 KodaX 生态中更懂企业的管理智能体操作层。</h1>
+      <p>
+        本文档基于当前产品矩阵与近期讨论整理，目标是明确 AgentOS 的产品定位、三类核心 Agent 的职责边界、Agent 之间的数据与任务通讯机制，以及从 AgentOS 到 Space 的企业级执行闭环。
+      </p>
+      <div class="meta-row">
+        <span class="pill">KodaX CLI：更懂企业的软件设施与流程</span>
+        <span class="pill">KodaX Space：更懂企业员工的本地执行端</span>
+        <span class="pill">AgentOS：更懂企业的管理智能体层</span>
+        <span class="pill">统一内核：KodaX Agent Kernel</span>
+      </div>
+    </div>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>一、背景与产品矩阵</h2>
+          <p class="section-desc">KodaX 生态不是三款互相竞争的产品，而是三个层级清晰的企业 Agent 产品形态。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="tag">KodaX CLI</span>
+          <h3>软件设施与流程能力</h3>
+          <p class="small">
+            面向研发、运维、软件流程和代码工程。它是更底层的 Coding / DevOps / 软件设施能力入口，也是 KodaX Agent 能力的基础表达。
+          </p>
+        </div>
+        <div class="card">
+          <span class="tag">KodaX Space</span>
+          <h3>员工本地执行端</h3>
+          <p class="small">
+            面向个人电脑、文件、浏览器、账号、本地工具和端侧权限。它更懂企业员工，承接真实执行任务。
+          </p>
+        </div>
+        <div class="card dark">
+          <span class="tag">AgentOS</span>
+          <h3>企业管理智能体层</h3>
+          <p>
+            面向企业、组织、项目、记忆、审批、Skill、Connector 和跨成员协同。它不直接做本地任务，而是管理和编排企业级上下文。
+          </p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>产品</th>
+            <th>核心定位</th>
+            <th>核心对象</th>
+            <th>边界</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>KodaX CLI</td>
+            <td>企业软件设施、代码、流程与运维能力</td>
+            <td>代码库、命令行、软件工程流程、DevOps</td>
+            <td>不承载企业项目协同和组织级治理</td>
+          </tr>
+          <tr>
+            <td>KodaX Space</td>
+            <td>企业员工本地执行环境</td>
+            <td>本地文件、浏览器、IDE、账号、桌面任务</td>
+            <td>不负责组织记忆、项目总控和企业市场治理</td>
+          </tr>
+          <tr>
+            <td>AgentOS</td>
+            <td>企业级 Agent 管理操作系统</td>
+            <td>项目、员工、审批、企业记忆、Skill、Connector、PAT</td>
+            <td>不直接替代 Space 执行任务，负责上层管理和调度</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>二、AgentOS 的产品定位</h2>
+          <p class="section-desc">AgentOS 的主线不是像 Space 一样执行任务，而是作为更上层的管理智能体系统。</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>一句话定义</strong>
+        <p>
+          AgentOS 是企业项目、组织记忆、工具市场、权限治理与本地 Space 执行之间的协同操作层。
+        </p>
+      </div>
+
+      <div class="grid grid-3" style="margin-top: 14px;">
+        <div class="card">
+          <span class="tag green">管理</span>
+          <h3>管理企业协同</h3>
+          <p class="small">管理项目、成员、审批、工作状态、企业效能和组织级上下文。</p>
+        </div>
+        <div class="card">
+          <span class="tag blue">治理</span>
+          <h3>治理企业资产</h3>
+          <p class="small">治理企业记忆库、技能市场、连接器市场、数据权限和上架审批。</p>
+        </div>
+        <div class="card">
+          <span class="tag amber">通讯</span>
+          <h3>连接 Space 执行</h3>
+          <p class="small">通过 PAT 把数据和任务请求送到 Space，再把执行结果回传给对应 Agent。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>三、AgentOS 的三个核心 Agent</h2>
+          <p class="section-desc">AgentOS 由 PAT Agent、OrgAgent、ProjectAgent 三个主要智能体构成。它们共享 KodaX 内核，靠角色配置、权限、工具和上下文区分职责。</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Agent</th>
+            <th>定位</th>
+            <th>主要能力</th>
+            <th>不负责什么</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PAT Agent / PersonalAgent</td>
+            <td>AgentOS 与 Space 之间的数据与任务通讯层</td>
+            <td>数据请求转发、任务分发、权限确认、Space 任务创建、结果回传、消息提醒</td>
+            <td>不做组织治理，不做项目总控，不直接替代 Space 执行</td>
+          </tr>
+          <tr>
+            <td>OrgAgent</td>
+            <td>企业级治理与工具市场管理 Agent</td>
+            <td>首页数据看板、审批中心、企业记忆库、技能市场、连接器市场、管理视角治理</td>
+            <td>不负责具体项目任务拆解，不直接进入员工本地电脑执行</td>
+          </tr>
+          <tr>
+            <td>ProjectAgent</td>
+            <td>项目级管理与协同 Agent</td>
+            <td>创建项目、项目看板、负责人总控、成员协同、任务拆解、分发到 PAT、成果审核和项目记忆沉淀</td>
+            <td>不直接执行成员本地任务，不管理全局市场和组织级审批</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>四、PAT Agent 的通讯设计</h2>
+          <p class="section-desc">PAT 是通讯兵。它负责在 AgentOS 与 Space 之间搬运结构化请求和结果，同时维护权限、来源、项目归属和用户确认。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <span class="tag blue">数据通道</span>
+          <h3>Data Channel</h3>
+          <ul class="list">
+            <li>Space 下载 Skill，例如行业研究、报告生成、数据清洗 Skill。</li>
+            <li>Space 连接 Connector / MCP，例如企查查、企业搜索、CRM、GitHub。</li>
+            <li>Space 请求数据库或数据源访问，例如只读数据仓库、项目文件索引。</li>
+            <li>Space 回传结构化摘要、证据、哈希、字段口径和结果文件索引。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag amber">任务通道</span>
+          <h3>Task Channel</h3>
+          <ul class="list">
+            <li>本人主动发起的任务请求。</li>
+            <li>ProjectAgent 分发给成员的项目任务。</li>
+            <li>同项目其他成员产生的协作消息。</li>
+            <li>Space 完成后通过 PAT 回传到对应项目页和 ProjectAgent。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>PAT 的核心模块</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>模块</th>
+            <th>能力</th>
+            <th>关键要求</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>消息收件箱</td>
+            <td>接收 ProjectAgent、OrgAgent、Space 的任务和数据消息</td>
+            <td>按通道分类，支持未读、提醒、回执和状态追踪</td>
+          </tr>
+          <tr>
+            <td>权限确认</td>
+            <td>对本地文件、账号、数据源、Connector、Skill 下载进行确认</td>
+            <td>敏感数据必须先确认范围，默认回传摘要和证据</td>
+          </tr>
+          <tr>
+            <td>Space 调用</td>
+            <td>在 Space 创建任务、安装 Skill、连接工具、启动执行</td>
+            <td>执行发生在 Space，AgentOS 只管理请求和回传结果</td>
+          </tr>
+          <tr>
+            <td>结果回传</td>
+            <td>把 Space 的执行结果送回 ProjectAgent 或 OrgAgent</td>
+            <td>回传必须携带项目、成员、来源、证据和权限状态</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>五、OrgAgent 需求设计</h2>
+          <p class="section-desc">OrgAgent 管理企业级工具、技能、记忆、连接器和审批治理，是 AgentOS 的组织级管理中枢。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <span class="tag">首页</span>
+          <h3>个人视角与管理视角</h3>
+          <ul class="list">
+            <li>个人视角展示个人效能、待处理事项、Space 回传、个人项目贡献和 PAT 状态。</li>
+            <li>管理视角展示员工数据、组织效能、Token 消耗、项目价值、成员负载和 Space 在线状态。</li>
+            <li>管理视角提供统一审批中心，集中审批企业记忆、技能市场和连接器。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag">市场治理</span>
+          <h3>企业级能力资产</h3>
+          <ul class="list">
+            <li>企业记忆库：上传文档和项目记忆，形成可视化、可问答、可提炼的组织记忆。</li>
+            <li>技能市场：用户可创建 Skill，管理员审批后上架，Space 可下载调用。</li>
+            <li>连接器：MCP、API、数据库、数据服务等企业级工具，审批后按权限开放。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>OrgAgent 管理对象</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>对象</th>
+            <th>用户动作</th>
+            <th>管理员动作</th>
+            <th>Space 关系</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>企业记忆库</td>
+            <td>上传文档、提交项目记忆候选、发起问答和提炼</td>
+            <td>审核、脱敏、去重、归类、发布到全局记忆</td>
+            <td>Space 回传成果可沉淀为项目记忆，进一步进入企业记忆</td>
+          </tr>
+          <tr>
+            <td>技能市场</td>
+            <td>按需求创建 Skill、提交上架、维护版本</td>
+            <td>审批权限、测试样例、依赖工具和安全风险</td>
+            <td>审批通过后，Space 可下载并执行 Skill</td>
+          </tr>
+          <tr>
+            <td>连接器</td>
+            <td>申请接入 MCP、API、数据库和数据服务</td>
+            <td>审批访问范围、授权周期、敏感字段和审计规则</td>
+            <td>Space 可按权限连接工具和数据源</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>六、ProjectAgent 需求设计</h2>
+          <p class="section-desc">ProjectAgent 是项目级管理 Agent。它把项目从“个人文件和零散任务”变成“可视化项目空间和跨成员协同对象”。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="tag green">创建</span>
+          <h3>任意用户可创建项目</h3>
+          <p class="small">用户创建项目后自动成为项目负责人，也就是项目群主。项目会出现在负责人和被拉入成员的 AgentOS 页面。</p>
+        </div>
+        <div class="card">
+          <span class="tag blue">协同</span>
+          <h3>项目空间不是群聊</h3>
+          <p class="small">项目页像项目看板，展示节点、成员、责任、进度、审批和成果。右侧 ProjectAgent 用于项目上下文问答与管理。</p>
+        </div>
+        <div class="card">
+          <span class="tag amber">分发</span>
+          <h3>任务通过 PAT 到 Space</h3>
+          <p class="small">负责人给成员分发任务后，任务进入成员 PAT，由 PAT 在成员 Space 创建并执行，完成后再回传项目页。</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>项目核心流程</h3>
+      <div class="flow">
+        <div class="flow-node"><strong>创建项目</strong><span>负责人上传资料，并与 ProjectAgent 对齐项目目标。</span></div>
+        <div class="flow-node"><strong>拆解节点</strong><span>ProjectAgent 基于企业记忆拆解项目阶段和责任项。</span></div>
+        <div class="flow-node"><strong>拉入成员</strong><span>负责人拉起成员，形成项目协作空间和成员视图。</span></div>
+        <div class="flow-node"><strong>分发 PAT</strong><span>任务发送给成员 PAT，并在对应 Space 创建执行任务。</span></div>
+        <div class="flow-node"><strong>回传沉淀</strong><span>Space 结果经 PAT 回传，ProjectAgent 审核、统计和沉淀。</span></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>角色</th>
+            <th>看到什么</th>
+            <th>能做什么</th>
+            <th>不能做什么</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>项目负责人</td>
+            <td>完整项目图谱、成员分工、节点进度、回传结果、审批状态</td>
+            <td>与 ProjectAgent 对话、拆解任务、拉成员、分发任务、审核成果</td>
+            <td>不能直接进入成员本地 Space 执行或读取其本地文件</td>
+          </tr>
+          <tr>
+            <td>项目成员</td>
+            <td>自己参与的项目页、责任项、上下文、审批和回传结果</td>
+            <td>用自己的 ProjectAgent 问答、确认任务、通过 PAT 在 Space 执行</td>
+            <td>不能管理全局项目权限或替负责人审核全项目成果</td>
+          </tr>
+          <tr>
+            <td>ProjectAgent</td>
+            <td>项目上下文、企业记忆、成员状态、任务节点、成果证据</td>
+            <td>项目规划、问答、拆解、分发、审核、统计和项目记忆沉淀</td>
+            <td>不直接做本地执行，不替代 PAT 或 Space</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>七、Agent 间通讯协议建议</h2>
+          <p class="section-desc">内部不建议完全依赖外部 A2A 协议，也不建议从零做封闭协议。推荐内部定义 AgentOS Message Protocol，同时保留 A2A 适配能力。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="tag">内部协议</span>
+          <h3>AgentOS Message Protocol</h3>
+          <p class="small">用于 ProjectAgent、OrgAgent、PAT、Space 之间传递项目、数据、权限、任务和回传结果。</p>
+        </div>
+        <div class="card">
+          <span class="tag">外部互操作</span>
+          <h3>A2A Adapter</h3>
+          <p class="small">用于未来接入第三方 Agent 或把 AgentOS Agent 暴露给外部系统。它是适配层，不是内部全部语义的唯一来源。</p>
+        </div>
+        <div class="card">
+          <span class="tag">工具调用</span>
+          <h3>MCP / Connector</h3>
+          <p class="small">用于 Skill、MCP、数据库、API 和外部系统的能力调用，由 OrgAgent 管理，由 PAT 下发到 Space。</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>内部消息格式草案</h3>
+      <pre class="protocol">{
+  "messageId": "msg_20260626_001",
+  "traceId": "trace_project_dispatch_001",
+  "from": {
+    "agent": "ProjectAgent",
+    "userId": "u_owner",
+    "projectId": "p_risk"
+  },
+  "to": {
+    "agent": "PAT",
+    "userId": "u_member"
+  },
+  "channel": "task",
+  "type": "task.dispatch",
+  "payload": {
+    "title": "产品方案工作项",
+    "context": "项目背景、交付标准、截止时间、证据要求",
+    "spaceAction": "create_task"
+  },
+  "permission": {
+    "requiresUserConfirm": true,
+    "dataScope": ["project_context", "approved_files"],
+    "expiresAt": "2026-07-26T00:00:00Z"
+  },
+  "status": "created",
+  "createdAt": "2026-06-26T10:00:00Z"
+}</pre>
+
+      <div class="divider"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>消息类型</th>
+            <th>通道</th>
+            <th>用途</th>
+            <th>典型链路</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>task.dispatch</td>
+            <td>task</td>
+            <td>ProjectAgent 向成员 PAT 分发项目任务</td>
+            <td>ProjectAgent -> PAT -> Space</td>
+          </tr>
+          <tr>
+            <td>task.result</td>
+            <td>task</td>
+            <td>Space 执行完成后回传任务结果</td>
+            <td>Space -> PAT -> ProjectAgent</td>
+          </tr>
+          <tr>
+            <td>data.skill_install</td>
+            <td>data</td>
+            <td>Space 请求下载企业技能市场中的 Skill</td>
+            <td>Skill Market -> PAT -> Space</td>
+          </tr>
+          <tr>
+            <td>data.connector_auth</td>
+            <td>data</td>
+            <td>Space 请求连接 MCP、API 或企业数据源</td>
+            <td>Connector Market -> PAT -> Space</td>
+          </tr>
+          <tr>
+            <td>approval.required</td>
+            <td>data / task</td>
+            <td>涉及权限、敏感数据或上架市场时触发审批</td>
+            <td>PAT / OrgAgent -> Approval Center</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>八、关键协同链路</h2>
+          <p class="section-desc">下面两条链路是 AgentOS 是否成立的核心闭环。</p>
+        </div>
+      </div>
+
+      <h3>链路 A：ProjectAgent 分发项目任务给成员</h3>
+      <div class="flow" style="margin-top: 12px;">
+        <div class="flow-node"><strong>负责人 ProjectAgent</strong><span>拆解任务，指定成员、上下文和交付标准。</span></div>
+        <div class="flow-node"><strong>成员 PAT</strong><span>收到任务消息，提醒成员确认并准备发送到 Space。</span></div>
+        <div class="flow-node"><strong>成员 Space</strong><span>创建本地任务，调用 KodaX 内核、Skill 和本地工具执行。</span></div>
+        <div class="flow-node"><strong>成员 PAT</strong><span>接收 Space 结果，进行摘要、证据和权限检查。</span></div>
+        <div class="flow-node"><strong>项目页</strong><span>结果回到项目页，由负责人 ProjectAgent 审核与沉淀。</span></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>链路 B：OrgAgent 发起数据或市场能力请求</h3>
+      <div class="flow" style="margin-top: 12px;">
+        <div class="flow-node"><strong>OrgAgent</strong><span>发起企业记忆、Skill、Connector 或数据相关请求。</span></div>
+        <div class="flow-node"><strong>本人 PAT</strong><span>判断数据通道，确认权限、范围和本地执行要求。</span></div>
+        <div class="flow-node"><strong>本人 Space</strong><span>下载 Skill、连接 Connector、访问数据源或执行分析。</span></div>
+        <div class="flow-node"><strong>本人 PAT</strong><span>回收结果，默认回传摘要、证据和状态。</span></div>
+        <div class="flow-node"><strong>OrgAgent</strong><span>更新审批、市场状态、企业记忆或组织数据看板。</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>九、阶段性需求清单</h2>
+          <p class="section-desc">以下是当前版本可以落地的产品需求边界。</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>优先级</th>
+            <th>模块</th>
+            <th>需求</th>
+            <th>验收标准</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>P0</td>
+            <td>PAT</td>
+            <td>实现数据通道和任务通道的消息队列表达</td>
+            <td>PAT 面板可以区分数据请求与任务请求，并展示来源、路由和状态</td>
+          </tr>
+          <tr>
+            <td>P0</td>
+            <td>ProjectAgent</td>
+            <td>实现项目创建、负责人视角、成员分工、分发到 PAT 和 Space 回传表达</td>
+            <td>项目页能看出负责人、成员、节点、任务路由和回传状态</td>
+          </tr>
+          <tr>
+            <td>P0</td>
+            <td>OrgAgent</td>
+            <td>首页管理视角提供统一审批中心</td>
+            <td>企业记忆、技能市场、连接器审批集中在首页管理视角处理</td>
+          </tr>
+          <tr>
+            <td>P1</td>
+            <td>企业记忆库</td>
+            <td>支持文档上传、项目记忆候选、图谱问答、提炼和治理入库</td>
+            <td>页面表达可视化记忆平台，而不是简单文档库</td>
+          </tr>
+          <tr>
+            <td>P1</td>
+            <td>技能市场</td>
+            <td>支持按需求创建 Skill，管理员审批后上架，创建者维护版本</td>
+            <td>市场页表达创建、上架、使用、更新的完整生命周期</td>
+          </tr>
+          <tr>
+            <td>P1</td>
+            <td>连接器</td>
+            <td>支持 MCP、API、数据库和数据服务的申请、审批和 Space 调用</td>
+            <td>连接器页表达企业级工具市场，而不是普通连接列表</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十、产品边界与原则</h2>
+          <p class="section-desc">这些边界能避免 AgentOS、Space、KodaX CLI 相互重叠。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <span class="tag green">应该做</span>
+          <ul class="list">
+            <li>管理项目、组织、审批、企业记忆、技能市场和连接器。</li>
+            <li>通过 PAT 把数据和任务请求送到 Space。</li>
+            <li>沉淀项目上下文、执行证据和可复用经验。</li>
+            <li>把 KodaX 内核作为统一 Agent 能力底座。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag red">不应该做</span>
+          <ul class="list">
+            <li>不在 AgentOS 内直接执行员工本地任务。</li>
+            <li>不重复构建一套新的 Agent 内核。</li>
+            <li>不把项目页做成普通群聊页面。</li>
+            <li>不让 Skill、Connector、企业记忆绕过审批直接全局可用。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      AgentOS 需求文档草案 · 基于当前产品矩阵讨论整理 · 建议后续补充接口字段、权限模型和真实数据流时序图
+    </footer>
+  </main>
+</body>
+</html>

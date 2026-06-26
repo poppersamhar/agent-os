@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Home, Wrench, Plug, ChevronDown, ChevronRight, Plus, ChevronLeft,
+  Home, Wrench, Plug, Plus, ChevronLeft,
   PanelLeft, UserCog, Users, TrendingUp, Settings, LogOut,
-  Pin, MoreVertical, Pencil, Archive, BookOpen,
+  Pin, MoreVertical, Pencil, Archive, BookOpen, GitBranch,
 } from 'lucide-react';
 import type { AccountType, ViewType } from '../App';
 import type { Project, StandaloneTask } from '../data/mockData';
@@ -14,6 +14,7 @@ interface SidebarProps {
   activeProjectId: string | null;
   activeTaskId: string | null;
   projectList: Project[];
+  spaceResultProjectId?: string;
   standaloneTasks: StandaloneTask[];
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -21,7 +22,6 @@ interface SidebarProps {
   onCreateProject: (name: string, description: string) => void;
   onCreateStandaloneTask: (name: string) => void;
   onLogout: () => void;
-  onSwitchAccount: () => void;
   onRenameTask: (taskId: string, newName: string) => void;
   onPinTask: (taskId: string, pinned: boolean) => void;
   onArchiveTask: (taskId: string) => void;
@@ -36,6 +36,7 @@ export default function Sidebar({
   activeProjectId,
   activeTaskId,
   projectList,
+  spaceResultProjectId,
   standaloneTasks,
   collapsed,
   onToggleCollapse,
@@ -43,7 +44,6 @@ export default function Sidebar({
   onCreateProject,
   onCreateStandaloneTask,
   onLogout,
-  onSwitchAccount,
   onRenameTask,
   onPinTask,
   onArchiveTask,
@@ -241,11 +241,16 @@ export default function Sidebar({
     );
   }
 
-  const mainNav = [
+  const orgNav = [
     { key: 'home' as ViewType, label: '首页', icon: Home },
-    { key: 'skill' as ViewType, label: 'Skills', icon: Wrench },
+    { key: 'knowledge' as ViewType, label: '企业记忆库', icon: BookOpen },
+    { key: 'skill' as ViewType, label: '技能市场', icon: Wrench },
     { key: 'connector' as ViewType, label: '连接器', icon: Plug },
-    { key: 'knowledge' as ViewType, label: '知识库', icon: BookOpen },
+  ];
+
+  const collapsedNav = [
+    ...orgNav,
+    { key: 'project' as ViewType, label: '项目', icon: GitBranch },
   ];
 
   const adminNav = [
@@ -264,9 +269,9 @@ export default function Sidebar({
           </button>
         </div>
         <nav className="flex-1 py-2 space-y-1">
-          {mainNav.map(item => {
+          {collapsedNav.map(item => {
             const Icon = item.icon;
-            const isActive = activeView === item.key;
+            const isActive = item.key === 'project' ? activeView === 'project' : activeView === item.key;
             return (
               <button
                 key={item.key}
@@ -290,7 +295,7 @@ export default function Sidebar({
 
   return (
     <>
-      <div className="w-[240px] h-full flex flex-col bg-gradient-to-l from-[#f5f5f5] to-white border-r border-border-light shrink-0">
+      <div data-agentos-sidebar className="w-[240px] h-full flex flex-col bg-gradient-to-l from-[#f5f5f5] to-white border-r border-border-light shrink-0">
         {/* Header */}
         <div className="h-12 px-3 flex items-center justify-between border-b border-border-light">
           <div className="flex items-center gap-2">
@@ -304,9 +309,13 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Main Nav */}
-        <nav className="px-2 py-2 space-y-0.5">
-          {mainNav.map(item => {
+        {/* OrgAgent */}
+        <nav className="px-3 py-3 space-y-1">
+          <div className="px-2 mb-1.5">
+            <div className="text-[11px] font-semibold text-text-secondary">OrgAgent</div>
+            <div className="text-[10px] text-text-muted mt-0.5">企业记忆 · 技能市场 · 连接器</div>
+          </div>
+          {orgNav.map(item => {
             const Icon = item.icon;
             const isActive = activeView === item.key && !activeProjectId;
             return (
@@ -324,70 +333,39 @@ export default function Sidebar({
           })}
         </nav>
 
-        {/* ── 下半部分：新建任务 + 我的项目 ── */}
+        {/* ── 下半部分：项目入口 ── */}
         <div className="flex-1 overflow-y-auto">
-          {/* 新建任务 — 固定，不参与折叠 */}
-          <div className="px-3 py-2 border-t border-border-light">
-            <button
-              onClick={() => onNavigate('newtask')}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] transition-all text-left ${
-                activeView === 'newtask' ? 'bg-primary-subtle text-primary-dark font-medium' : 'text-text-secondary hover:bg-primary/5 hover:text-text'
-              }`}
-            >
-              <Plus className="w-4 h-4 shrink-0" strokeWidth={1.5} />
-              <span className="font-medium">新建任务</span>
-            </button>
-          </div>
-
-          {/* 独立任务历史 — 可折叠 */}
-          <div className="px-3 py-1">
-            <button
-              onClick={() => setExpandedStandalone(!expandedStandalone)}
-              className="w-full flex items-center gap-1.5 px-2 py-1 text-[11px] text-text-muted hover:text-text transition-colors"
-            >
-              {expandedStandalone ? (
-                <ChevronDown className="w-3 h-3 shrink-0" strokeWidth={2} />
-              ) : (
-                <ChevronRight className="w-3 h-3 shrink-0" strokeWidth={2} />
-              )}
-              <span>历史对话</span>
-            </button>
-
-            {expandedStandalone && (
-              <div className="ml-5 pl-3 border-l border-border-light space-y-0.5 mt-1">
-                {[...standaloneTasks].sort((a, b) => {
-                  if (a.pinned && !b.pinned) return -1;
-                  if (!a.pinned && b.pinned) return 1;
-                  return 0;
-                }).map(task => {
-                  const isActive = activeTaskId === task.id && !activeProjectId;
-                  return (
-                    <button
-                      key={task.id}
-                      onClick={() => onNavigate('task', undefined, task.id)}
-                      className={`w-full text-left px-2 py-1 rounded-lg text-[11px] truncate transition-all flex items-center gap-1 group ${
-                        isActive ? 'bg-primary-subtle text-primary-dark font-medium' : 'text-text-muted hover:bg-primary/5 hover:text-text'
-                      }`}
-                    >
-                      {task.pinned && <Pin className="w-2.5 h-2.5 text-primary shrink-0" strokeWidth={2.5} />}
-                      <span className="truncate flex-1">{task.name}</span>
-                      <TaskItemMenu taskId={task.id} isPinned={!!task.pinned} />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 我的项目 */}
-          <div className="px-3 py-2">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">我的项目</span>
-              <button onClick={() => setShowProjectModal(true)} className="p-1 hover:bg-primary/5 rounded text-text-muted">
+          {/* 项目 */}
+          <div className="px-3 py-3 border-t border-border-light">
+            <div className="px-2 mb-1.5">
+              <div className="text-[11px] font-semibold text-text-secondary">ProjectAgent</div>
+              <div className="text-[10px] text-text-muted mt-0.5">项目组合 · 上下文协同</div>
+            </div>
+            <div className={`w-full flex items-center gap-1 rounded-lg transition-all group ${
+              activeView === 'project' ? 'bg-primary-subtle ring-1 ring-primary/20' : 'hover:bg-primary/5'
+            }`}>
+              <button
+                type="button"
+                className={`min-w-0 flex-1 flex items-center gap-2 px-2 py-2 text-left text-[13px] ${
+                  activeView === 'project' ? 'text-primary-dark font-medium' : 'text-text-secondary group-hover:text-text'
+                }`}
+                onClick={() => onNavigate('project')}
+              >
+                <GitBranch className="w-4 h-4 shrink-0" strokeWidth={1.7} />
+                <span className="truncate flex-1">项目</span>
+              </button>
+              <button
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowProjectModal(true);
+                }}
+                className="mr-1 p-1 hover:bg-primary/10 rounded text-text-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                title="新建项目"
+              >
                 <Plus className="w-3.5 h-3.5" strokeWidth={2} />
               </button>
             </div>
-            <div className="space-y-0.5">
+            <div className="ml-5 mt-1.5 pl-3 border-l border-border-light space-y-0.5">
               {[...projectList].sort((a, b) => {
                 if (a.pinned && !b.pinned) return -1;
                 if (!a.pinned && b.pinned) return 1;
@@ -396,24 +374,16 @@ export default function Sidebar({
                 const isExpanded = expandedProjects.has(project.id);
                 const isActiveProject = activeProjectId === project.id;
                 const isRenaming = renamingProjectId === project.id;
+                const hasSpaceResult = project.id === spaceResultProjectId;
                 return (
                   <div key={project.id}>
                     <div
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] transition-all cursor-pointer group ${
-                        isActiveProject ? 'bg-primary-subtle text-primary-dark font-medium' : 'text-text-secondary hover:bg-primary/5'
+                        isActiveProject ? 'bg-primary/10 text-primary-dark font-medium' : 'text-text-muted hover:bg-primary/5 hover:text-text'
                       }`}
                       onClick={() => !isRenaming && onNavigate('project', project.id)}
                     >
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleProject(project.id); }}
-                        className="p-0.5 rounded hover:bg-primary/10"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="w-3 h-3 shrink-0" strokeWidth={2} />
-                        ) : (
-                          <ChevronRight className="w-3 h-3 shrink-0" strokeWidth={2} />
-                        )}
-                      </button>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${hasSpaceResult ? 'bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.12)]' : isActiveProject ? 'bg-primary-dark' : 'bg-text-muted/50'}`} />
                       {project.pinned && <Pin className="w-2.5 h-2.5 text-primary shrink-0" strokeWidth={2.5} />}
                       {isRenaming ? (
                         <input
@@ -449,34 +419,16 @@ export default function Sidebar({
                               setRenameValue(name);
                             }}
                           />
-                          {project.unread && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
+                          {hasSpaceResult ? (
+                            <span className="shrink-0 rounded-full bg-red-500/10 px-1.5 py-0.5 text-[9px] font-medium leading-none text-red-600">
+                              回传
+                            </span>
+                          ) : project.unread && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                          )}
                         </>
                       )}
                     </div>
-                    {isExpanded && (
-                      <div className="ml-4 pl-3 border-l border-border-light space-y-0.5 mt-0.5">
-                        {[...project.chats].sort((a, b) => {
-                          if (a.pinned && !b.pinned) return -1;
-                          if (!a.pinned && b.pinned) return 1;
-                          return 0;
-                        }).map(chat => {
-                          const isActiveTask = activeTaskId === chat.id;
-                          return (
-                            <button
-                              key={chat.id}
-                              onClick={() => onNavigate('task', project.id, chat.id)}
-                              className={`w-full text-left px-2 py-1 rounded-lg text-[11px] truncate transition-all flex items-center gap-1 group ${
-                                isActiveTask ? 'bg-primary-subtle text-primary-dark font-medium' : 'text-text-muted hover:bg-primary/5 hover:text-text'
-                              }`}
-                            >
-                              {chat.pinned && <Pin className="w-2.5 h-2.5 text-primary shrink-0" strokeWidth={2.5} />}
-                              <span className="truncate flex-1">{chat.name}</span>
-                              <TaskItemMenu taskId={chat.id} isPinned={!!chat.pinned} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -510,7 +462,7 @@ export default function Sidebar({
         </div>
 
         {/* User Card */}
-        <div className="p-3">
+        <div className="p-3" data-agentos-user-card>
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
@@ -526,15 +478,6 @@ export default function Sidebar({
             </button>
             {showUserMenu && (
               <div className="absolute bottom-full left-0 mb-1 w-full bg-white rounded-xl border border-border-light shadow-lg py-1">
-                <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    onSwitchAccount();
-                  }}
-                  className="w-full px-3 py-2 text-left text-[12px] text-text-secondary hover:bg-bg transition-colors"
-                >
-                  切换为 {accountType === 'admin' ? 'Member' : 'Admin'}
-                </button>
                 <button
                   onClick={() => { setShowUserMenu(false); onLogout(); }}
                   className="w-full px-3 py-2 text-left text-[12px] text-danger hover:bg-bg transition-colors"

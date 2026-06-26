@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AgentOS 产品形态整理</title>
+  <style>
+    :root {
+      --bg: #f6f6f3;
+      --paper: #ffffff;
+      --ink: #151515;
+      --muted: #66665f;
+      --line: #dedbd2;
+      --soft: #f1f0ec;
+      --accent: #f06b3a;
+      --blue: #2563eb;
+      --green: #0f8a5f;
+      --red: #d94a38;
+      --radius: 8px;
+      --shadow: 0 20px 58px rgba(24, 24, 20, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.68;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .hero {
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hero-inner,
+    .content,
+    .footer {
+      width: min(1120px, calc(100vw - 48px));
+      margin: 0 auto;
+    }
+
+    .hero-inner {
+      padding: 56px 0 34px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .eyebrow::before {
+      width: 24px;
+      height: 2px;
+      background: var(--accent);
+      content: "";
+    }
+
+    h1 {
+      max-width: 960px;
+      margin: 0;
+      font-size: 42px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 900px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .content {
+      padding: 30px 0 74px;
+    }
+
+    section {
+      margin-top: 28px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.25;
+    }
+
+    .section-desc {
+      max-width: 680px;
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-flex;
+      min-height: 26px;
+      align-items: center;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fbfbf9;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .body {
+      padding: 22px 24px 24px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 12px 13px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--soft);
+      color: #3d3d38;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right: 0;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .flow-node {
+      min-height: 112px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfbf9;
+      padding: 14px;
+      position: relative;
+    }
+
+    .flow-node:not(:last-child)::after {
+      position: absolute;
+      top: 50%;
+      right: -10px;
+      width: 10px;
+      height: 1px;
+      background: var(--line);
+      content: "";
+    }
+
+    .flow-node strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .flow-node span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .grid-2,
+    .grid-3 {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfbf9;
+      padding: 16px;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .card.green {
+      border-color: rgba(15, 138, 95, 0.25);
+      background: #f1fbf7;
+    }
+
+    .card.red {
+      border-color: rgba(217, 74, 56, 0.26);
+      background: #fff5f2;
+    }
+
+    .card.blue {
+      border-color: rgba(37, 99, 235, 0.26);
+      background: #f3f7ff;
+    }
+
+    .footer {
+      padding: 0 0 48px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .flow,
+      .grid-2,
+      .grid-3,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-node:not(:last-child)::after {
+        display: none;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .hero-inner,
+      .content,
+      .footer {
+        width: min(100vw - 28px, 1120px);
+      }
+
+      .hero-inner {
+        padding-top: 36px;
+      }
+
+      h1 {
+        font-size: 31px;
+      }
+
+      .section-head {
+        display: block;
+      }
+
+      .tag {
+        margin-top: 12px;
+      }
+
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="eyebrow">Enterprise Agent Operating Layer</div>
+      <h1>AgentOS 是企业项目、组织记忆、权限治理与端侧执行之间的协同操作层。</h1>
+      <p class="lead">
+        这份文档聚焦 AgentOS 当前应呈现的产品形态：Agent 能力不再以每个页面右侧聊天框的方式堆叠，而是通过 PAT、项目上下文服务、企业记忆库、Skill 与 Connector 治理进入企业协作流程。
+      </p>
+    </div>
+  </header>
+
+  <main class="content">
+    <section id="agents">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">一、Agent 设计：一个内核，多种角色配置</h2>
+          <p class="section-desc">KodaX 是唯一 Agent 内核。AgentOS 中不同 Agent 的差异来自角色配置、Skill、工具、上下文和权限，不来自重写能力。</p>
+        </div>
+        <span class="tag">Role Config, Not New Kernel</span>
+      </div>
+      <div class="body">
+        <table>
+          <thead>
+            <tr>
+              <th>角色</th>
+              <th>产品形态</th>
+              <th>核心职责</th>
+              <th>是否执行任务</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PersonalAgent / PAT</td>
+              <td>驻扎在 Space 与 AgentOS 用户区的小型通讯入口</td>
+              <td>请求提醒、审批提醒、数据授权、任务包转发、结果回传</td>
+              <td>不直接执行；执行由 Space 内 KodaX 完成</td>
+            </tr>
+            <tr>
+              <td>OrgAgent</td>
+              <td>组织治理服务，可在企业记忆库、Skill、连接器页面出现</td>
+              <td>企业记忆治理、Skill 管理、Connector 权限、组织级规则与审核</td>
+              <td>不做员工任务；做治理、审核、归档和配置</td>
+            </tr>
+            <tr>
+              <td>Project Context Assistant</td>
+              <td>项目页上下文服务，不再强调“ProjectAgent 人设”</td>
+              <td>项目问答、项目计划、节点解释、证据追踪、项目记忆提炼</td>
+              <td>不做具体工作；只组织项目上下文</td>
+            </tr>
+            <tr>
+              <td>Professional Agent / Skill Agent</td>
+              <td>通过 Skill 市场或配置注册</td>
+              <td>专业能力封装，例如市场分析、PPT、数据清洗、合规检查</td>
+              <td>可被 Space 调用执行，也可被 AgentOS 编排为能力资源</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="pages">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">二、页面形态建议</h2>
+          <p class="section-desc">页面是工作对象的容器，不是 Agent 的展示位。Agent 能力隐藏在按钮、流程、提醒和上下文服务后面。</p>
+        </div>
+        <span class="tag">UI 信息架构</span>
+      </div>
+      <div class="body">
+        <table>
+          <thead>
+            <tr>
+              <th>页面</th>
+              <th>主要对象</th>
+              <th>建议展示</th>
+              <th>不建议展示</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>首页</td>
+              <td>个人请求与项目状态</td>
+              <td>请求中心、活跃项目、Space/PAT 状态、记忆候选、待审批</td>
+              <td>右侧 PersonalAgent 聊天面板</td>
+            </tr>
+            <tr>
+              <td>项目页</td>
+              <td>项目上下文</td>
+              <td>项目图谱、节点、负责人、证据、决策、项目记忆、项目问答入口</td>
+              <td>执行型 ProjectAgent、任务创建层、员工本地执行能力</td>
+            </tr>
+            <tr>
+              <td>企业记忆库</td>
+              <td>组织资产</td>
+              <td>全局记忆、项目记忆候选、脱敏审核、权限、引用关系图谱</td>
+              <td>普通文件上传库的表达</td>
+            </tr>
+            <tr>
+              <td>Skills</td>
+              <td>可复用能力</td>
+              <td>Skill 市场、创建/配置/权限、成功率、调用日志、版本治理</td>
+              <td>把 Skill 做成独立聊天机器人列表</td>
+            </tr>
+            <tr>
+              <td>连接器</td>
+              <td>系统接入</td>
+              <td>MCP/API/第三方系统/数字员工接入、权限范围、审计日志</td>
+              <td>无权限边界的全局工具箱</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="flows">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">三、关键流程：项目、执行、记忆三条闭环</h2>
+          <p class="section-desc">AgentOS 的产品价值来自闭环，而不是单个问答能力。</p>
+        </div>
+        <span class="tag">Operating Loop</span>
+      </div>
+      <div class="body">
+        <h3>1. 项目协同闭环</h3>
+        <div class="flow" aria-label="项目协同闭环">
+          <div class="flow-node"><strong>项目进入</strong><span>负责人创建项目文档和目标约束</span></div>
+          <div class="flow-node"><strong>企业知识确认</strong><span>基于企业记忆库确认方向和历史经验</span></div>
+          <div class="flow-node"><strong>节点拆解</strong><span>拆为项目节点、负责人和交付证据</span></div>
+          <div class="flow-node"><strong>PAT 下发</strong><span>发送到成员 Space，由员工授权执行</span></div>
+          <div class="flow-node"><strong>结果回传</strong><span>证据、摘要、决策进入项目页</span></div>
+        </div>
+
+        <h3 style="margin-top: 24px;">2. 端侧执行闭环</h3>
+        <div class="flow" aria-label="端侧执行闭环">
+          <div class="flow-node"><strong>AgentOS 请求</strong><span>项目请求、审批请求、数据请求结构化</span></div>
+          <div class="flow-node"><strong>PAT 提醒</strong><span>小猫在用户区提醒并解释请求</span></div>
+          <div class="flow-node"><strong>Space 授权</strong><span>员工决定是否允许读取、执行、回传</span></div>
+          <div class="flow-node"><strong>KodaX 执行</strong><span>调用内核、工具、Skill 完成具体任务</span></div>
+          <div class="flow-node"><strong>AgentOS 沉淀</strong><span>只回传必要摘要、证据和结构化结果</span></div>
+        </div>
+
+        <h3 style="margin-top: 24px;">3. 企业记忆闭环</h3>
+        <div class="flow" aria-label="企业记忆闭环">
+          <div class="flow-node"><strong>项目记忆</strong><span>沉淀任务、决策、证据和复盘</span></div>
+          <div class="flow-node"><strong>提炼候选</strong><span>项目上下文服务生成可复用经验</span></div>
+          <div class="flow-node"><strong>脱敏审核</strong><span>负责人确认权限、脱敏和适用场景</span></div>
+          <div class="flow-node"><strong>企业记忆</strong><span>OrgAgent 归类、打标、发布</span></div>
+          <div class="flow-node"><strong>反哺项目</strong><span>新项目可引用全局经验和规则</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="internal">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">四、自家产品对比：边界必须清晰</h2>
+          <p class="section-desc">AgentOS 的正确定位依赖于不和 KodaX、Space 抢职责。</p>
+        </div>
+        <span class="tag">Internal Boundary</span>
+      </div>
+      <div class="body">
+        <table>
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th>KodaX</th>
+              <th>KodaX Space</th>
+              <th>AgentOS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>一句话定位</td>
+              <td>Agent 能力内核</td>
+              <td>个人电脑上的执行产品</td>
+              <td>企业项目与组织记忆操作系统</td>
+            </tr>
+            <tr>
+              <td>核心用户</td>
+              <td>开发者、系统集成方、内部产品</td>
+              <td>企业员工、开发者、知识工作者</td>
+              <td>项目负责人、员工、管理者、组织管理员</td>
+            </tr>
+            <tr>
+              <td>核心对象</td>
+              <td>会话、工具、Skill、代码、任务</td>
+              <td>本地项目、文件、终端、浏览器、授权执行</td>
+              <td>项目、成员、审批、企业记忆、Skill 市场、连接器</td>
+            </tr>
+            <tr>
+              <td>主要价值</td>
+              <td>把 Agent 能力做深做稳</td>
+              <td>把 Agent 能力产品化到个人电脑</td>
+              <td>把企业协同与经验沉淀组织起来</td>
+            </tr>
+            <tr>
+              <td>不该做什么</td>
+              <td>不做完整企业协同 SaaS</td>
+              <td>不做企业全局治理中台</td>
+              <td>不做本地任务执行器，不重复造 KodaX 内核</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="external">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">五、外部产品对比：AgentOS 的差异点</h2>
+          <p class="section-desc">这里对比的是产品定位与系统边界，不是逐项功能评分。公开产品能力会持续变化，落地时需再次核对。</p>
+        </div>
+        <span class="tag">Market Position</span>
+      </div>
+      <div class="body">
+        <table>
+          <thead>
+            <tr>
+              <th>产品类型</th>
+              <th>代表产品</th>
+              <th>它们更强的地方</th>
+              <th>AgentOS 的差异</th>
+              <th>AgentOS 风险</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>通用企业 AI 工作台</td>
+              <td>ChatGPT Business / Enterprise, Workspace Agents</td>
+              <td>通用模型能力强，组织部署和多工具自动化生态成熟</td>
+              <td>AgentOS 更强调项目对象、企业记忆和 Space 端侧执行闭环</td>
+              <td>生态成熟度、模型品牌和标准化连接器数量需要追赶</td>
+            </tr>
+            <tr>
+              <td>办公套件 AI</td>
+              <td>Microsoft 365 Copilot</td>
+              <td>深度嵌入 Word、Excel、PowerPoint、Outlook、Teams 和企业数据</td>
+              <td>AgentOS 可作为跨办公套件的项目与执行协调层，尤其适合本地执行和私有化场景</td>
+              <td>若客户已深度使用 Microsoft 生态，AgentOS 必须做集成而不是替代</td>
+            </tr>
+            <tr>
+              <td>项目管理与团队知识 AI</td>
+              <td>Jira / Atlassian Rovo</td>
+              <td>Issue、项目管理、搜索、Rovo Agents 与软件团队流程成熟</td>
+              <td>AgentOS 不是票据系统，而是项目上下文、PAT 下发、证据回传、记忆提炼层</td>
+              <td>如果没有和 Jira/飞书项目等系统打通，会被当作又一个项目管理工具</td>
+            </tr>
+            <tr>
+              <td>文档与知识工作区 AI</td>
+              <td>Notion AI / Enterprise Search</td>
+              <td>文档、知识库、搜索和轻量项目管理体验成熟</td>
+              <td>AgentOS 的记忆来自项目过程和端侧执行证据，不只是文档和搜索</td>
+              <td>文档编辑体验、模板生态、协作细节需要持续补齐</td>
+            </tr>
+            <tr>
+              <td>协同办公超级入口</td>
+              <td>钉钉、飞书</td>
+              <td>IM、审批、会议、文档、知识库、组织通讯录与企业分发能力强</td>
+              <td>AgentOS 更像 AI-native 项目与记忆操作层，可接入这些平台而非正面对抗</td>
+              <td>必须明确“协同入口补充层”的策略，否则会被超级 App 的入口优势压制</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="pros-cons">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">六、产品优缺点</h2>
+          <p class="section-desc">AgentOS 的价值很清晰，但难点也不小：它要同时解释清楚企业协同、端侧执行、记忆治理和 Agent 内核复用。</p>
+        </div>
+        <span class="tag">Strengths & Risks</span>
+      </div>
+      <div class="body">
+        <div class="grid-2">
+          <div class="card green">
+            <h3>优势 1：单一 Agent 内核，避免能力分裂</h3>
+            <p>KodaX 作为唯一内核，AgentOS 不需要重复构建 Agent 执行能力，产品矩阵更稳。</p>
+          </div>
+          <div class="card green">
+            <h3>优势 2：项目经验可沉淀为组织资产</h3>
+            <p>项目页不只是协作空间，还能把决策、证据、复盘提炼成企业记忆。</p>
+          </div>
+          <div class="card green">
+            <h3>优势 3：端侧隐私和权限边界更自然</h3>
+            <p>Space/PAT 处理本地文件和账号授权，AgentOS 只接收必要摘要和证据。</p>
+          </div>
+          <div class="card green">
+            <h3>优势 4：适合企业治理场景</h3>
+            <p>审批、脱敏、Skill 权限、Connector 审计天然属于 AgentOS，而不是个人电脑端。</p>
+          </div>
+          <div class="card red">
+            <h3>风险 1：概念层次容易过多</h3>
+            <p>KodaX、Space、PAT、AgentOS、Project Context、OrgAgent 都要解释清楚，否则用户会困惑。</p>
+          </div>
+          <div class="card red">
+            <h3>风险 2：必须依赖 Space 成熟度</h3>
+            <p>如果 Space 的端侧执行、权限弹窗、任务回传不稳定，AgentOS 的闭环会断。</p>
+          </div>
+          <div class="card red">
+            <h3>风险 3：企业系统集成成本高</h3>
+            <p>连接器、权限、审计、数据口径和组织架构同步，会决定产品能否进入真实业务。</p>
+          </div>
+          <div class="card red">
+            <h3>风险 4：需要避免“又一个项目管理工具”</h3>
+            <p>AgentOS 应定位为 AI-native 项目上下文与记忆层，而不是替代 Jira、飞书项目、钉钉项目。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">七、落地路线建议</h2>
+          <p class="section-desc">先把边界和闭环做准，再扩展组织级生态。</p>
+        </div>
+        <span class="tag">Next Steps</span>
+      </div>
+      <div class="body">
+        <div class="grid-3">
+          <div class="card blue">
+            <h3>阶段 1：产品形态收敛</h3>
+            <p>首页去 PersonalAgent 面板；项目页去执行型 ProjectAgent；PAT 小猫成为个人请求入口；项目页聚焦图谱和上下文。</p>
+          </div>
+          <div class="card blue">
+            <h3>阶段 2：打通请求闭环</h3>
+            <p>项目请求、审批请求、数据请求从 AgentOS 到 PAT，再到 Space 执行，最后回传摘要、证据和状态。</p>
+          </div>
+          <div class="card blue">
+            <h3>阶段 3：建设企业记忆</h3>
+            <p>项目记忆候选、脱敏审核、负责人确认、OrgAgent 归类发布，形成组织级复用资产。</p>
+          </div>
+          <div class="card blue">
+            <h3>阶段 4：Skill 与 Connector 治理</h3>
+            <p>建立 Skill 市场、版本、权限、调用日志；Connector 支持企业系统和第三方数字员工接入。</p>
+          </div>
+          <div class="card blue">
+            <h3>阶段 5：与外部协同平台集成</h3>
+            <p>接入飞书、钉钉、Jira、GitHub、Slack、SharePoint 等，而不是试图替代所有入口。</p>
+          </div>
+          <div class="card blue">
+            <h3>阶段 6：形成行业方案</h3>
+            <p>围绕供应链、产品研发、售前、数据治理、运营分析等场景，封装可复制的项目模板和记忆模型。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    版本：v0.2 草案。定位关键词：KodaX 内核、Space 端侧执行、PAT 通讯兵、AgentOS 企业协同、项目记忆、企业记忆、Skill/Connector 治理。
+  </footer>
+</body>
+</html>
