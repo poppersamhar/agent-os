@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Home, Wrench, Plug, Plus, ChevronLeft,
-  PanelLeft, LogOut,
+  PanelLeft,
   Pin, MoreVertical, Pencil, Archive, BookOpen, GitBranch,
 } from 'lucide-react';
 import type { AccountType, ViewType } from '../App';
@@ -21,7 +21,6 @@ interface SidebarProps {
   onNavigate: (view: ViewType, projectId?: string, taskId?: string) => void;
   onCreateProject: (name: string, description: string) => void;
   onCreateStandaloneTask: (name: string) => void;
-  onLogout: () => void;
   onRenameTask: (taskId: string, newName: string) => void;
   onPinTask: (taskId: string, pinned: boolean) => void;
   onArchiveTask: (taskId: string) => void;
@@ -43,7 +42,6 @@ export default function Sidebar({
   onNavigate,
   onCreateProject,
   onCreateStandaloneTask,
-  onLogout,
   onRenameTask,
   onPinTask,
   onArchiveTask,
@@ -57,19 +55,6 @@ export default function Sidebar({
   const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
-
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setShowUserMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
 
   const toggleProject = (pid: string) => {
     setExpandedProjects(prev => {
@@ -277,11 +262,6 @@ export default function Sidebar({
             );
           })}
         </nav>
-        <div className="py-2 border-t border-border-light">
-          <button onClick={onLogout} className="w-full flex justify-center py-2 text-text-muted hover:text-danger transition-colors" title="退出">
-            <LogOut className="w-[18px] h-[18px]" strokeWidth={1.8} />
-          </button>
-        </div>
       </div>
     );
   }
@@ -432,11 +412,7 @@ export default function Sidebar({
 
         {/* User Card */}
         <div className="p-3" data-agentos-user-card>
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-primary/5 transition-colors"
-            >
+          <div className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl">
               <div className="w-7 h-7 rounded-full bg-primary-subtle flex items-center justify-center text-[11px] font-bold text-primary-dark">
                 {accountType === 'admin' ? 'A' : 'S'}
               </div>
@@ -444,17 +420,6 @@ export default function Sidebar({
                 <div className="text-[12px] font-medium text-text">{accountType === 'admin' ? 'admin' : 'samhar'}</div>
                 <div className="text-[10px] text-text-muted">{accountType === 'admin' ? 'Admin' : 'Member'}</div>
               </div>
-            </button>
-            {showUserMenu && (
-              <div className="absolute bottom-full left-0 mb-1 w-full bg-white rounded-xl border border-border-light shadow-lg py-1">
-                <button
-                  onClick={() => { setShowUserMenu(false); onLogout(); }}
-                  className="w-full px-3 py-2 text-left text-[12px] text-danger hover:bg-bg transition-colors"
-                >
-                  退出登录
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>

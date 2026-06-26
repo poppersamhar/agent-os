@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
-import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 
 import SkillPage from './components/SkillPage';
@@ -31,12 +30,7 @@ const spaceResultNotification: SpaceResultNotification = {
 };
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('agent_os_logged_in') === 'true';
-  });
-  const [accountType, setAccountType] = useState<AccountType>(() => {
-    return (localStorage.getItem('agent_os_account_type') as AccountType) || 'member';
-  });
+  const accountType: AccountType = 'member';
   const [dashboardScope, setDashboardScope] = useState<AccountType>(() => {
     return (localStorage.getItem('agent_os_dashboard_scope') as AccountType) || 'member';
   });
@@ -47,24 +41,6 @@ function App() {
   const [standaloneTaskList, setStandaloneTaskList] = useState<StandaloneTask[]>(standaloneTasks);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showProjectWizard, setShowProjectWizard] = useState(false);
-
-  const handleLogin = (type: AccountType) => {
-    setIsLoggedIn(true);
-    setAccountType(type);
-    setDashboardScope(type);
-    localStorage.setItem('agent_os_logged_in', 'true');
-    localStorage.setItem('agent_os_account_type', type);
-    localStorage.setItem('agent_os_dashboard_scope', type);
-    setActiveView('home');
-    setActiveProjectId(null);
-    setActiveTaskId(null);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    localStorage.removeItem('agent_os_logged_in');
-    localStorage.removeItem('agent_os_account_type');
-  };
 
   const handleDashboardScopeChange = (scope: AccountType) => {
     setDashboardScope(scope);
@@ -210,10 +186,6 @@ function App() {
   const activeTaskFromStandalone = standaloneTaskList.find(t => t.id === activeTaskId);
   const activeTask = activeTaskFromProject || activeTaskFromStandalone || null;
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
   return (
     <div className="h-screen flex bg-bg overflow-hidden">
       <Sidebar
@@ -228,7 +200,6 @@ function App() {
         onNavigate={handleNavigate}
         onCreateProject={handleCreateProject}
         onCreateStandaloneTask={handleCreateStandaloneTask}
-        onLogout={handleLogout}
         onRenameTask={handleRenameTask}
         onPinTask={handlePinTask}
         onArchiveTask={handleArchiveTask}
