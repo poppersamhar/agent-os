@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Home, Wrench, Plug, Plus, ChevronLeft,
-  PanelLeft, UserCog, Users, TrendingUp, Settings, LogOut,
+  PanelLeft, LogOut,
   Pin, MoreVertical, Pencil, Archive, BookOpen, GitBranch,
 } from 'lucide-react';
 import type { AccountType, ViewType } from '../App';
@@ -253,13 +253,6 @@ export default function Sidebar({
     { key: 'project' as ViewType, label: '项目', icon: GitBranch },
   ];
 
-  const adminNav = [
-    { key: 'settings' as ViewType, label: '成员管理', icon: UserCog, external: 'https://agent-os-l4.vercel.app' },
-    { key: 'settings' as ViewType, label: '团队管理', icon: Users, external: 'https://agent-os-l4.vercel.app' },
-    { key: 'settings' as ViewType, label: '用量管理', icon: TrendingUp, external: 'https://agent-os-l4.vercel.app' },
-    { key: 'settings' as ViewType, label: '系统设置', icon: Settings, external: 'https://agent-os-l4.vercel.app' },
-  ];
-
   if (collapsed) {
     return (
       <div className="w-14 h-full flex flex-col bg-gradient-to-l from-[#f5f5f5] to-white border-r border-border-light shrink-0">
@@ -435,30 +428,6 @@ export default function Sidebar({
             </div>
           </div>
 
-          {/* Admin Section */}
-          {accountType === 'admin' && (
-            <div className="px-3 py-2 border-t border-border-light">
-              <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1.5">组织管理</div>
-              <div className="space-y-0.5">
-                {adminNav.map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <a
-                      key={i}
-                      href={item.external}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] text-text-secondary hover:bg-primary/5 hover:text-text transition-all"
-                    >
-                      <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
-                      <span>{item.label}</span>
-                      <span className="ml-auto text-[10px] text-text-muted">↗</span>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* User Card */}

@@ -13,7 +13,7 @@ import PersonalAgentDeskPet from './components/PersonalAgentDeskPet';
 import { workLines, standaloneTasks, currentUserId, type Project, type StandaloneTask } from './data/mockData';
 
 export type AccountType = 'member' | 'admin';
-export type ViewType = 'home' | 'skill' | 'connector' | 'knowledge' | 'project' | 'task' | 'newtask' | 'settings';
+export type ViewType = 'home' | 'skill' | 'connector' | 'knowledge' | 'project' | 'task' | 'newtask';
 export type SpaceResultNotification = {
   projectId: string;
   projectName: string;
@@ -72,11 +72,6 @@ function App() {
   };
 
   const handleNavigate = useCallback((view: ViewType, projectId?: string, taskId?: string) => {
-    // Member 无法访问 settings
-    if (view === 'settings' && accountType !== 'admin') {
-      setActiveView('home');
-      return;
-    }
     if (view === 'newtask') {
       setActiveView('home');
       setActiveProjectId(null);
@@ -103,11 +98,11 @@ function App() {
     setActiveView(view);
     if (projectId !== undefined) setActiveProjectId(projectId);
     if (taskId !== undefined) setActiveTaskId(taskId);
-    if (view === 'home' || view === 'skill' || view === 'connector' || view === 'knowledge' || view === 'settings') {
+    if (view === 'home' || view === 'skill' || view === 'connector' || view === 'knowledge') {
       setActiveProjectId(null);
       setActiveTaskId(null);
     }
-  }, [accountType]);
+  }, []);
 
   const handleCreateProject = (name: string, description: string) => {
     const pid = `p${Date.now()}`;
@@ -275,11 +270,6 @@ function App() {
             onPinTask={handlePinTask}
             onArchiveTask={handleArchiveTask}
           />
-        )}
-        {activeView === 'settings' && accountType === 'admin' && (
-          <div className="h-full flex items-center justify-center text-text-muted text-sm">
-            组织管理功能请前往 L2/L3/L4 层
-          </div>
         )}
       </main>
       <PersonalAgentDeskPet
