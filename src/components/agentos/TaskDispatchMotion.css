@@ -1,0 +1,9 @@
+.aos-dispatch-overlay { position: fixed; inset: 0; z-index: 100; overflow: hidden; pointer-events: none; }
+.aos-dispatch-flight { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.aos-dispatch-tail, .aos-dispatch-tail-glow { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.aos-dispatch-tail { stroke-width: 1.65; }
+.aos-dispatch-tail-glow { stroke-width: 5; opacity: .23; filter: blur(2px); }
+.aos-task-count { display: inline-block; transform-origin: center; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  .aos-dispatch-overlay { display: none; }
+}

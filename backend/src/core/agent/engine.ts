@@ -352,7 +352,7 @@ export class WorkAgentEngine {
 
       // 默认回到 idle，等待用户下一条消息
       await this.transitionState(ctx, 'idle');
-      console.log('[agentLoop] stream done, fullResponse length:', fullResponse.length, 'toolCall:', toolCallBuffer?.name);
+      console.log('[agentLoop] stream done, fullResponse length:', fullResponse.length);
 
       // 纯文本回复
       if (fullResponse.trim()) {

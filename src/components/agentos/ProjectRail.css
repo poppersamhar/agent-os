@@ -1,0 +1,91 @@
+.aos-shell--experience .aos-project-rail {
+  position: absolute;
+  top: calc(var(--aos-stage-top) + var(--aos-avatar-size) + var(--aos-project-rail-offset));
+  right: var(--aos-inline-space);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--aos-project-item-gap);
+  width: var(--aos-avatar-size);
+}
+
+.aos-shell--experience .aos-project-shortcut {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--aos-project-item-size);
+  width: var(--aos-project-item-size);
+  height: var(--aos-project-item-size);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.aos-shell--experience .aos-project-status-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #b8bbb1;
+  border-radius: 50%;
+  background: transparent;
+  transition: border-color .15s;
+}
+
+.aos-shell--experience .aos-project-shortcut:hover .aos-project-status-ring,
+.aos-shell--experience .aos-project-shortcut[aria-current="true"] .aos-project-status-ring {
+  border-color: #73796b;
+}
+
+.aos-shell--experience .aos-project-shortcut[data-status="running"] .aos-project-status-ring {
+  border-color: #dadcd5;
+  border-top-color: #727a69;
+  border-right-color: #a0a695;
+  animation: aos-project-status-spin 1.15s linear infinite;
+}
+
+.aos-shell--experience .aos-project-shortcut[data-status="completed"] .aos-project-status-ring::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #4388f5;
+}
+
+.aos-shell--experience .aos-project-shortcut-name {
+  position: absolute;
+  right: calc(100% + 9px);
+  top: 50%;
+  transform: translate(3px, -50%);
+  padding: 5px 9px;
+  border: 1px solid #e6e7e0;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 3px 12px #25291d08;
+  color: #5e6454;
+  font-size: 10px;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity .15s, transform .15s, visibility .15s;
+}
+
+.aos-shell--experience .aos-project-shortcut:hover .aos-project-shortcut-name,
+.aos-shell--experience .aos-project-shortcut:focus-visible .aos-project-shortcut-name {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aos-shell--experience .aos-project-status-ring,
+  .aos-shell--experience .aos-project-shortcut-name { transition: none; }
+  .aos-shell--experience .aos-project-shortcut[data-status="running"] .aos-project-status-ring { animation: none; }
+}
+
+@keyframes aos-project-status-spin { to { transform: rotate(360deg); } }

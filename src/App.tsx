@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import UnifiedWorkspace from './components/agentos/UnifiedWorkspace';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 
@@ -29,7 +30,7 @@ const spaceResultNotification: SpaceResultNotification = {
   receivedAt: '刚刚',
 };
 
-function App() {
+function LegacyApp() {
   const accountType: AccountType = 'member';
   const [dashboardScope, setDashboardScope] = useState<AccountType>(() => {
     return (localStorage.getItem('agent_os_dashboard_scope') as AccountType) || 'member';
@@ -261,4 +262,8 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return new URLSearchParams(window.location.search).get('view') === 'legacy'
+    ? <LegacyApp />
+    : <UnifiedWorkspace />;
+}

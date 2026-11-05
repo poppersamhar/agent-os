@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TraceOps｜企业智能体运行经验沉淀与自蒸馏系统</title>
+  <style>
+    :root {
+      --bg: #f5f5f4;
+      --paper: #ffffff;
+      --ink: #171717;
+      --muted: #737373;
+      --soft: #a3a3a3;
+      --line: #e7e5e4;
+      --line-strong: #d6d3d1;
+      --panel: #fafafa;
+      --dark: #111111;
+      --green: #047857;
+      --blue: #1d4ed8;
+      --amber: #a16207;
+      --red: #b91c1c;
+      --violet: #6d28d9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.68;
+    }
+
+    main {
+      width: min(1160px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 56px 0 76px;
+    }
+
+    .hero {
+      padding: 52px 52px 46px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--paper);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.06);
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 940px;
+      font-size: 42px;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      max-width: 900px;
+      margin: 20px 0 0;
+      color: #404040;
+      font-size: 16px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: #404040;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    section {
+      margin-top: 24px;
+      padding: 34px 36px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      line-height: 1.35;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .section-desc {
+      max-width: 700px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .card {
+      min-height: 100%;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+    }
+
+    .card.dark {
+      background: var(--dark);
+      color: #ffffff;
+      border-color: var(--dark);
+    }
+
+    .card.dark p,
+    .card.dark .small {
+      color: #d4d4d4;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      margin-bottom: 12px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #efefef;
+      color: #404040;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .tag.green {
+      background: #ecfdf5;
+      color: var(--green);
+    }
+
+    .tag.blue {
+      background: #eff6ff;
+      color: var(--blue);
+    }
+
+    .tag.amber {
+      background: #fffbeb;
+      color: var(--amber);
+    }
+
+    .tag.red {
+      background: #fef2f2;
+      color: var(--red);
+    }
+
+    .tag.violet {
+      background: #f5f3ff;
+      color: var(--violet);
+    }
+
+    .quote {
+      padding: 22px 24px;
+      border-left: 4px solid var(--dark);
+      border-radius: 12px;
+      background: #fafafa;
+      color: #292524;
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .divider {
+      height: 1px;
+      margin: 24px 0;
+      background: var(--line);
+    }
+
+    ul.list {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: #404040;
+      font-size: 14px;
+    }
+
+    ul.list li {
+      margin: 6px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    th {
+      background: #fafafa;
+      color: #57534e;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    code {
+      padding: 2px 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fafafa;
+      color: #171717;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 14px 0 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #111111;
+      color: #f5f5f4;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .flow-node {
+      position: relative;
+      min-height: 122px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .flow-node::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -13px;
+      transform: translateY(-50%);
+      color: var(--soft);
+      font-weight: 700;
+    }
+
+    .flow-node:last-child::after {
+      display: none;
+    }
+
+    .flow-node strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .flow-node span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .layer {
+      display: grid;
+      grid-template-columns: 160px 1fr 240px;
+      gap: 14px;
+      align-items: start;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .layer-title {
+      font-weight: 700;
+      color: #292524;
+    }
+
+    .layer-meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .matrix {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr 1fr;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .matrix > div {
+      padding: 14px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .matrix > div:nth-child(4n) {
+      border-right: none;
+    }
+
+    .matrix .head {
+      background: #fafafa;
+      color: #57534e;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .metric {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .metric strong {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    footer {
+      margin-top: 24px;
+      padding: 26px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        width: min(100vw - 24px, 1160px);
+        padding: 24px 0 48px;
+      }
+
+      .hero,
+      section {
+        padding: 24px;
+        border-radius: 14px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .grid-2,
+      .grid-3,
+      .grid-4,
+      .flow,
+      .layer {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-node::after {
+        content: "↓";
+        top: auto;
+        right: 50%;
+        bottom: -18px;
+        transform: translateX(50%);
+      }
+
+      .matrix {
+        grid-template-columns: 1fr;
+      }
+
+      .matrix > div {
+        border-right: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="hero">
+      <p class="eyebrow">TraceOps · AgentOS Core Capability</p>
+      <h1>企业智能体运行经验沉淀与自蒸馏系统</h1>
+      <p>
+        TraceOps 是 KodaX 生态中面向未来模型进化的数据底座。它记录的不只是聊天内容或系统日志，
+        而是 Agent 与 Harness 在真实企业任务中的完整协作过程，并将这些过程治理、提炼、标注、导出为可用于记忆、评测和训练的数据资产。
+      </p>
+      <div class="meta-row">
+        <span class="pill">定位：AgentOS 底层数据资产能力</span>
+        <span class="pill">对象：KodaX CLI / Space / AgentOS 全链路 Trace</span>
+        <span class="pill">目标：可回放、可治理、可训练、可反哺</span>
+        <span class="pill">版本：概念设计稿 v0.1</span>
+      </div>
+    </header>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>一、核心判断</h2>
+          <p class="section-desc">AgentOS 的价值不只是执行任务或管理智能体，而是把组织协同、项目推进和智能体运行过程沉淀成企业可持续复利的数据资产。</p>
+        </div>
+      </div>
+
+      <div class="quote">
+        AgentOS 不是简单替代 Space 做端侧执行；它在组织和项目层完成规划、协同、分发、审批、治理与复盘，并把这些过程沉淀为可训练的企业 Trace。
+      </div>
+
+      <div class="grid grid-3" style="margin-top: 18px;">
+        <div class="card">
+          <span class="tag blue">不是日志</span>
+          <h3>Trace 是执行经验</h3>
+          <p class="small">普通日志回答“发生了什么”，TraceOps 要回答“为什么这样做、怎么做、做得怎么样、下次如何做得更好”。</p>
+        </div>
+        <div class="card">
+          <span class="tag green">不是记忆库</span>
+          <h3>Trace 是可训练资产</h3>
+          <p class="small">企业记忆沉淀结论和经验，TraceOps 保留任务从目标到结果的链路，能转化为 SFT、偏好、评测和工具调用数据。</p>
+        </div>
+        <div class="card">
+          <span class="tag violet">不是监控</span>
+          <h3>Trace 是进化闭环</h3>
+          <p class="small">监控关注状态和故障，TraceOps 关注高质量行为样本，并反过来优化 KodaX 内核、Skill、路由和项目拆解策略。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>二、Trace 的定义</h2>
+          <p class="section-desc">一次 Trace 是一次智能任务从产生、拆解、执行、审核、沉淀到反馈的完整链路。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card dark">
+          <span class="tag">Trace 包含什么</span>
+          <ul class="list">
+            <li>用户原始意图、项目目标和业务上下文。</li>
+            <li>Agent 当时加载的角色配置、指令、Skill、工具、权限和记忆。</li>
+            <li>计划、拆解、分发、工具调用、文件读写、命令执行、接口访问。</li>
+            <li>失败、重试、人工确认、审批、纠偏、选择和放弃。</li>
+            <li>最终产物、负责人评价、企业记忆候选和训练价值评分。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag amber">Trace 不应该是什么</span>
+          <ul class="list">
+            <li>不是只保存聊天记录。</li>
+            <li>不是只保存最终答案。</li>
+            <li>不是未经脱敏就进入训练集的原始企业数据。</li>
+            <li>不是脱离项目、成员、权限和业务目标的孤立日志。</li>
+            <li>不是把所有数据无差别沉淀到全局记忆。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>普通日志</th>
+            <th>对话历史</th>
+            <th>TraceOps Trace</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>记录对象</td>
+            <td>系统事件和报错</td>
+            <td>用户与 Agent 的消息</td>
+            <td>目标、计划、工具、执行、反馈、评价的完整链路</td>
+          </tr>
+          <tr>
+            <td>主要用途</td>
+            <td>排障、审计、监控</td>
+            <td>上下文延续、问答回看</td>
+            <td>复盘、治理、提炼、评测、训练、自蒸馏</td>
+          </tr>
+          <tr>
+            <td>是否可训练</td>
+            <td>通常不可直接训练</td>
+            <td>质量不稳定，缺少工具和结果信号</td>
+            <td>经过治理和标注后可转化为多类训练数据</td>
+          </tr>
+          <tr>
+            <td>企业价值</td>
+            <td>保证系统可靠</td>
+            <td>保证会话连续</td>
+            <td>形成企业智能体经验资产和模型进化飞轮</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>三、它在 KodaX 生态中的位置</h2>
+          <p class="section-desc">KodaX 负责产生底层执行 Trace，Space 负责端侧任务 Trace，AgentOS 负责组织级 Trace 的治理和资产化。</p>
+        </div>
+      </div>
+
+      <div class="flow">
+        <div class="flow-node">
+          <strong>KodaX CLI</strong>
+          <span>记录代码理解、工具调用、命令执行、文件修改、测试反馈等底层执行轨迹。</span>
+        </div>
+        <div class="flow-node">
+          <strong>KodaX Space</strong>
+          <span>记录端侧任务、个人电脑上下文、Skill 调用、Connector 接入和本地结果回传。</span>
+        </div>
+        <div class="flow-node">
+          <strong>PAT Agent</strong>
+          <span>负责 AgentOS 与 Space 之间的数据和任务通讯，并控制端侧 Trace 的出端边界。</span>
+        </div>
+        <div class="flow-node">
+          <strong>ProjectAgent</strong>
+          <span>记录项目目标、拆解策略、成员分工、成果审核和项目记忆沉淀。</span>
+        </div>
+        <div class="flow-node">
+          <strong>OrgAgent</strong>
+          <span>负责企业级治理、脱敏、审批、训练授权、数据集导出和反哺策略。</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="tag blue">KodaX</span>
+          <h3>懂执行过程</h3>
+          <p class="small">知道代码、工具、命令、文件、测试和错误修复路径，是最细粒度的执行 Trace 来源。</p>
+        </div>
+        <div class="card">
+          <span class="tag green">Space</span>
+          <h3>懂员工端侧</h3>
+          <p class="small">知道个人任务、本地环境、桌面数据和端侧执行结果，是企业任务落到个人电脑后的 Trace 来源。</p>
+        </div>
+        <div class="card">
+          <span class="tag violet">AgentOS</span>
+          <h3>懂企业上下文</h3>
+          <p class="small">知道组织目标、项目关系、成员角色、审批权限和经验是否被认可，是 Trace 资产化的关键层。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>四、端到端闭环</h2>
+          <p class="section-desc">TraceOps 的目标是让每一次任务都可以变成下一代 Agent 的训练材料。</p>
+        </div>
+      </div>
+
+      <div class="flow">
+        <div class="flow-node">
+          <strong>任务发生</strong>
+          <span>项目、审批、数据请求、代码任务、Skill 调用或 Connector 调用开始。</span>
+        </div>
+        <div class="flow-node">
+          <strong>全链路记录</strong>
+          <span>AgentOS、PAT、Space、KodaX 按统一协议记录事件、上下文和产物。</span>
+        </div>
+        <div class="flow-node">
+          <strong>治理提炼</strong>
+          <span>脱敏、权限裁剪、去噪、质量评分，提取高价值成功链路和失败修复链路。</span>
+        </div>
+        <div class="flow-node">
+          <strong>数据集生成</strong>
+          <span>生成 SFT、工具调用、计划拆解、偏好、评测、路由和记忆数据集。</span>
+        </div>
+        <div class="flow-node">
+          <strong>反哺模型</strong>
+          <span>优化 KodaX 内核、ProjectAgent 拆解、PAT 路由、Skill 选择和企业 Agent 行为。</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="quote">
+        飞轮：任务越多 -> Trace 越多 -> 数据越好 -> Agent 越强 -> 企业越愿意使用 -> 产生更多 Trace。
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>五、系统架构</h2>
+          <p class="section-desc">TraceOps 可以按六层建设，从采集到反哺，每一层都要面向企业级治理和未来训练使用。</p>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="layer">
+          <div class="layer-title">1. 采集层</div>
+          <div>
+            <h3>统一 Trace SDK / Event Bus</h3>
+            <p class="small">所有 Agent 和 Harness 都以统一事件格式写入 Trace。包括 ProjectAgent、PAT、OrgAgent、Space、KodaX、Skill、Connector。</p>
+          </div>
+          <div class="layer-meta">关键能力：trace_id、session_id、event_id、span_id、parent_id、actor_id、agent_id。</div>
+        </div>
+
+        <div class="layer">
+          <div class="layer-title">2. 上下文层</div>
+          <div>
+            <h3>Context Snapshot</h3>
+            <p class="small">记录任务发生时的项目、成员、权限、记忆、文档、代码仓库、工具可用性和企业策略版本。</p>
+          </div>
+          <div class="layer-meta">关键能力：上下文快照、版本化、权限范围、引用而非复制敏感内容。</div>
+        </div>
+
+        <div class="layer">
+          <div class="layer-title">3. 存储层</div>
+          <div>
+            <h3>Raw / Clean / Train 三层数据湖</h3>
+            <p class="small">原始 Trace 用于审计和回放，清洗 Trace 用于分析和提炼，训练 Trace 用于导出和模型优化。</p>
+          </div>
+          <div class="layer-meta">关键能力：不可篡改原始记录、脱敏副本、训练授权副本。</div>
+        </div>
+
+        <div class="layer">
+          <div class="layer-title">4. 治理层</div>
+          <div>
+            <h3>Policy / Redaction / Approval</h3>
+            <p class="small">判断哪些 Trace 可项目内查看、可进入企业记忆、可导出训练、必须脱敏、必须人工审批。</p>
+          </div>
+          <div class="layer-meta">关键能力：数据分级、脱敏规则、保留周期、训练授权、审计。</div>
+        </div>
+
+        <div class="layer">
+          <div class="layer-title">5. 提炼层</div>
+          <div>
+            <h3>Trace Distiller</h3>
+            <p class="small">从复杂原始链路中提取高价值样本，包括成功链路、失败修复、优秀计划、工具调用轨迹和人工偏好。</p>
+          </div>
+          <div class="layer-meta">关键能力：质量评分、去噪、链路压缩、样本构造、人工校验。</div>
+        </div>
+
+        <div class="layer">
+          <div class="layer-title">6. 反哺层</div>
+          <div>
+            <h3>Dataset / Eval / Fine-tune / Routing</h3>
+            <p class="small">导出训练集和评测集，优化 KodaX 内核、Agent 角色配置、Skill 市场排序和任务路由策略。</p>
+          </div>
+          <div class="layer-meta">关键能力：JSONL、Parquet、OpenAI 格式、内部训练格式、评测基准。</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>六、核心数据模型</h2>
+          <p class="section-desc">TraceOps 的数据模型应该同时服务回放、治理、训练和评测。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="tag blue">Trace</span>
+          <h3>一次完整任务链路</h3>
+          <p class="small">从目标产生到结果确认的全局容器。它跨 Agent、跨 Space、跨 KodaX 执行过程。</p>
+        </div>
+        <div class="card">
+          <span class="tag green">Session</span>
+          <h3>一次交互会话</h3>
+          <p class="small">用户与 Agent 的对话、确认、审批和反馈，可能属于某个 Trace 的一个阶段。</p>
+        </div>
+        <div class="card">
+          <span class="tag violet">Event</span>
+          <h3>一个可追踪事件</h3>
+          <p class="small">计划、工具调用、文件读取、消息转发、结果回传、审批、记忆入库等都应该被事件化。</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <pre>{
+  "trace_id": "tr_20260702_project_risk_001",
+  "session_id": "ss_project_agent_001",
+  "project_id": "p_risk",
+  "task_id": "task_product_plan",
+  "source": "ProjectAgent",
+  "channel": "task",
+  "actors": [
+    { "type": "user", "id": "samhar", "role": "project_owner" },
+    { "type": "agent", "id": "project_agent", "kernel": "kodax" },
+    { "type": "agent", "id": "pat_agent", "kernel": "kodax" },
+    { "type": "runtime", "id": "space_samhar" }
+  ],
+  "context_snapshot": {
+    "project_goal": "供应链金融风控平台方案拆解",
+    "memory_refs": ["mem_enterprise_risk_policy", "mem_prior_contract_review"],
+    "permission_scope": ["project_context", "approved_files", "summary_only"],
+    "policy_version": "trace_policy_v0.1"
+  },
+  "events": [
+    {
+      "event_id": "evt_001",
+      "type": "plan.created",
+      "agent_id": "project_agent",
+      "input": "构建项目文档并拆解产品方案任务",
+      "output": "拆为项目资料、AI方向校准、产品方案、成果审核四个节点"
+    },
+    {
+      "event_id": "evt_002",
+      "type": "task.dispatched",
+      "agent_id": "project_agent",
+      "target_agent": "pat_agent",
+      "target_space": "space_samhar",
+      "payload_policy": "summary_plus_refs"
+    },
+    {
+      "event_id": "evt_003",
+      "type": "tool.result",
+      "agent_id": "kodax",
+      "tool": "repo_scan",
+      "status": "success",
+      "artifact_refs": ["artifact_plan_md", "artifact_evidence_json"]
+    }
+  ],
+  "evaluation": {
+    "accepted_by_owner": true,
+    "quality_score": 0.86,
+    "training_value": "high",
+    "risk_level": "medium",
+    "redaction_required": true
+  }
+}</pre>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>七、事件分类</h2>
+          <p class="section-desc">统一事件分类可以保证不同 Agent、工具和端侧执行过程能够被拼成一条完整链路。</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>事件类型</th>
+            <th>说明</th>
+            <th>典型来源</th>
+            <th>训练价值</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>intent.received</code></td>
+            <td>用户提出原始目标或业务问题</td>
+            <td>ProjectAgent / OrgAgent / PAT</td>
+            <td>构造 instruction 数据</td>
+          </tr>
+          <tr>
+            <td><code>context.loaded</code></td>
+            <td>加载项目、文档、记忆、代码仓库、连接器数据</td>
+            <td>AgentOS / Space</td>
+            <td>训练上下文选择与检索策略</td>
+          </tr>
+          <tr>
+            <td><code>plan.created</code></td>
+            <td>生成任务计划、步骤、节点和成员分工</td>
+            <td>ProjectAgent</td>
+            <td>训练复杂任务拆解能力</td>
+          </tr>
+          <tr>
+            <td><code>task.dispatched</code></td>
+            <td>将任务分发给成员 PAT 或 Space</td>
+            <td>ProjectAgent / PAT</td>
+            <td>训练 Agent 路由和任务分配</td>
+          </tr>
+          <tr>
+            <td><code>tool.called</code></td>
+            <td>调用工具、Skill、Connector、命令或 API</td>
+            <td>KodaX / Space</td>
+            <td>训练工具调用轨迹</td>
+          </tr>
+          <tr>
+            <td><code>error.observed</code></td>
+            <td>执行失败、测试失败、权限失败或接口失败</td>
+            <td>KodaX / Space</td>
+            <td>训练错误诊断与修复</td>
+          </tr>
+          <tr>
+            <td><code>repair.succeeded</code></td>
+            <td>失败后通过重试、改计划或换工具完成任务</td>
+            <td>KodaX / ProjectAgent</td>
+            <td>高价值自蒸馏样本</td>
+          </tr>
+          <tr>
+            <td><code>approval.required</code></td>
+            <td>涉及数据、权限、上架或训练授权</td>
+            <td>OrgAgent / PAT</td>
+            <td>训练企业治理边界</td>
+          </tr>
+          <tr>
+            <td><code>result.accepted</code></td>
+            <td>负责人或成员确认结果有效</td>
+            <td>ProjectAgent / 用户</td>
+            <td>构造偏好和质量标签</td>
+          </tr>
+          <tr>
+            <td><code>memory.promoted</code></td>
+            <td>项目记忆被提炼进入企业记忆</td>
+            <td>OrgAgent</td>
+            <td>训练经验提炼能力</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>八、三类 Agent 的职责</h2>
+          <p class="section-desc">TraceOps 不是单个 Agent 的能力，而是 PAT、ProjectAgent、OrgAgent 分工协作的底层系统。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="tag blue">PAT Agent</span>
+          <h3>采集和转运 Trace</h3>
+          <ul class="list">
+            <li>记录 AgentOS 与 Space 之间的数据/任务消息。</li>
+            <li>标记哪些数据来自端侧，哪些只能摘要回传。</li>
+            <li>为每次 Space 执行生成 trace_id 和路由记录。</li>
+            <li>提示用户是否允许敏感 Trace 出端。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag green">ProjectAgent</span>
+          <h3>解释和评价 Trace</h3>
+          <ul class="list">
+            <li>记录项目目标、拆解依据和成员分工。</li>
+            <li>关联所有成员 PAT 回传的执行结果。</li>
+            <li>判断 Trace 是否完成项目目标。</li>
+            <li>将高价值链路提炼为项目记忆候选。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag violet">OrgAgent</span>
+          <h3>治理和资产化 Trace</h3>
+          <ul class="list">
+            <li>维护企业级 Trace 策略、脱敏规则和保留周期。</li>
+            <li>审批 Trace 是否进入企业记忆或训练数据池。</li>
+            <li>管理可导出的数据集和评测集。</li>
+            <li>追踪 Trace 对模型和 Agent 能力的反哺效果。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>九、Trace 治理</h2>
+          <p class="section-desc">企业级 Trace 最大的难点不是采集，而是知道什么可以被使用、如何使用、被谁使用。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <span class="tag red">治理边界</span>
+          <h3>必须先分级，再训练</h3>
+          <ul class="list">
+            <li><strong>L0 公开样本：</strong>无敏感信息，可进入通用训练和展示。</li>
+            <li><strong>L1 企业内部：</strong>只在企业租户内使用，可进入企业私有训练。</li>
+            <li><strong>L2 项目受限：</strong>只允许项目内回放和分析，不进入全局训练。</li>
+            <li><strong>L3 端侧敏感：</strong>只允许摘要、指标或哈希出端。</li>
+            <li><strong>L4 禁止训练：</strong>仅可审计，不可进入记忆、评测或训练。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag amber">审批策略</span>
+          <h3>训练数据需要明确授权</h3>
+          <ul class="list">
+            <li>进入企业记忆前，需要项目负责人确认。</li>
+            <li>进入训练数据池前，需要 OrgAgent 触发治理审批。</li>
+            <li>涉及客户、合同、源码、数据库字段时，必须先脱敏。</li>
+            <li>端侧文件默认不上传原文，只上传摘要、引用和证据哈希。</li>
+            <li>训练导出需要记录导出人、用途、时间、数据版本。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>治理动作</th>
+            <th>触发条件</th>
+            <th>负责人</th>
+            <th>输出结果</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>脱敏</td>
+            <td>Trace 包含姓名、客户、合同、代码、密钥、数据库字段</td>
+            <td>OrgAgent + 数据负责人</td>
+            <td>生成 clean_trace，并保留 redaction map</td>
+          </tr>
+          <tr>
+            <td>裁剪</td>
+            <td>Trace 中存在无关上下文、长日志、重复消息</td>
+            <td>Trace Distiller</td>
+            <td>生成可阅读、可训练的链路摘要</td>
+          </tr>
+          <tr>
+            <td>授权</td>
+            <td>Trace 准备进入企业记忆或训练池</td>
+            <td>项目负责人 / 管理员</td>
+            <td>设置 usage_scope 和 expires_at</td>
+          </tr>
+          <tr>
+            <td>保留</td>
+            <td>原始 Trace 超过企业保留周期</td>
+            <td>OrgAgent</td>
+            <td>归档、删除或只保留摘要</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十、自蒸馏数据流水线</h2>
+          <p class="section-desc">自蒸馏不是把所有 Trace 丢给模型，而是把高质量链路转化成明确任务类型的数据集。</p>
+        </div>
+      </div>
+
+      <div class="flow">
+        <div class="flow-node">
+          <strong>Raw Trace</strong>
+          <span>完整记录所有过程，包含噪声、失败、敏感字段和无关上下文。</span>
+        </div>
+        <div class="flow-node">
+          <strong>Clean Trace</strong>
+          <span>脱敏、去噪、压缩、结构化，保留决策、工具、结果和反馈信号。</span>
+        </div>
+        <div class="flow-node">
+          <strong>Candidate</strong>
+          <span>筛选成功链路、失败修复链路、负责人认可结果和高复用经验。</span>
+        </div>
+        <div class="flow-node">
+          <strong>Dataset</strong>
+          <span>构造 SFT、Tool-use、Planning、Preference、Evaluation 多类样本。</span>
+        </div>
+        <div class="flow-node">
+          <strong>Model / Agent</strong>
+          <span>训练、评测或调整 KodaX 内核、Agent 配置、Skill 路由和计划策略。</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="tag blue">SFT 数据</span>
+          <h3>学会高质量结果</h3>
+          <p class="small">从“用户目标 + 上下文 -> 被接受的最终产物”构造监督微调样本。</p>
+        </div>
+        <div class="card">
+          <span class="tag green">Tool-use 数据</span>
+          <h3>学会调用工具</h3>
+          <p class="small">从“任务 -> 工具选择 -> 参数 -> 观察 -> 下一步”构造工具调用轨迹。</p>
+        </div>
+        <div class="card">
+          <span class="tag violet">Planning 数据</span>
+          <h3>学会拆解项目</h3>
+          <p class="small">从 ProjectAgent 的项目拆解、成员分工、节点依赖中学习长程任务计划。</p>
+        </div>
+        <div class="card">
+          <span class="tag amber">Preference 数据</span>
+          <h3>学会判断好坏</h3>
+          <p class="small">从负责人接受/驳回、人工修改、A/B 结果中构造偏好样本。</p>
+        </div>
+        <div class="card">
+          <span class="tag red">Repair 数据</span>
+          <h3>学会修复失败</h3>
+          <p class="small">从失败、诊断、重试、修复成功链路中训练错误恢复能力。</p>
+        </div>
+        <div class="card">
+          <span class="tag">Evaluation 数据</span>
+          <h3>建立真实评测</h3>
+          <p class="small">把企业真实任务抽象成 benchmark，用于评估新模型、新 Skill 和新 Agent 配置。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十一、产品形态</h2>
+          <p class="section-desc">TraceOps 可以在 AgentOS 内形成一组后台能力，不一定一开始暴露给普通员工，但需要服务管理者、数据负责人和模型团队。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <span class="tag blue">Trace 看板</span>
+          <h3>企业智能体运行数据总览</h3>
+          <ul class="list">
+            <li>今日 Trace 数、成功率、失败修复率、平均任务长度。</li>
+            <li>按项目、Agent、Skill、Connector、员工、Space 节点聚合。</li>
+            <li>可训练比例、待脱敏比例、待审批比例、训练贡献度。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag green">Trace 回放</span>
+          <h3>像时间线一样复盘任务</h3>
+          <ul class="list">
+            <li>展示用户目标、Agent 计划、工具调用、失败、修复和结果。</li>
+            <li>支持按 Agent、工具、成员、文件、审批筛选。</li>
+            <li>帮助项目负责人理解结果是怎么来的。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag violet">高价值候选池</span>
+          <h3>把好链路挑出来</h3>
+          <ul class="list">
+            <li>自动识别完整成功链路、失败修复链路和人工认可结果。</li>
+            <li>给每条 Trace 打训练价值、复用价值、风险等级。</li>
+            <li>支持人工标注“好样本、差样本、禁止训练”。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag amber">数据集导出</span>
+          <h3>让 Trace 变成训练材料</h3>
+          <ul class="list">
+            <li>按数据类型导出 JSONL、Parquet、OpenAI fine-tune 格式。</li>
+            <li>导出前进行脱敏、采样、版本锁定和审批。</li>
+            <li>记录导出目的、负责人、模型版本和使用范围。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十二、数据集格式</h2>
+          <p class="section-desc">不同训练目标需要不同数据格式，不能用一种“聊天记录格式”覆盖所有需求。</p>
+        </div>
+      </div>
+
+      <div class="matrix">
+        <div class="head">数据集类型</div>
+        <div class="head">输入</div>
+        <div class="head">输出</div>
+        <div class="head">用途</div>
+
+        <div>SFT Dataset</div>
+        <div>用户目标 + 上下文摘要 + 约束</div>
+        <div>被接受的最终产物</div>
+        <div>提升回答、文档、代码和方案生成质量</div>
+
+        <div>Tool Trajectory Dataset</div>
+        <div>任务目标 + 当前观察</div>
+        <div>工具选择、参数、下一步</div>
+        <div>提升工具调用和多步执行能力</div>
+
+        <div>Planning Dataset</div>
+        <div>复杂项目目标 + 成员/资源/权限</div>
+        <div>项目节点、依赖、分工、验收标准</div>
+        <div>提升 ProjectAgent 的拆解和协同能力</div>
+
+        <div>Preference Dataset</div>
+        <div>同一目标下的多个候选结果</div>
+        <div>人工偏好或负责人选择</div>
+        <div>用于偏好优化、奖励模型或质量排序</div>
+
+        <div>Repair Dataset</div>
+        <div>失败状态 + 错误信息 + 历史尝试</div>
+        <div>诊断、修复策略和成功路径</div>
+        <div>提升长程任务中的错误恢复能力</div>
+
+        <div>Evaluation Dataset</div>
+        <div>企业真实任务描述 + 固定评测上下文</div>
+        <div>标准答案、评分规则、通过条件</div>
+        <div>评估模型、Skill、Agent 配置是否进步</div>
+      </div>
+
+      <pre>{
+  "dataset_type": "tool_trajectory",
+  "source_trace_id": "tr_20260702_project_risk_001",
+  "messages": [
+    { "role": "user", "content": "请基于项目资料生成供应链金融风控方案" },
+    { "role": "assistant", "content": "我会先读取项目资料，再提取风险维度，最后生成方案草稿。" }
+  ],
+  "tool_calls": [
+    {
+      "tool": "read_project_memory",
+      "arguments": { "project_id": "p_risk", "topic": "risk_policy" },
+      "observation": "找到 3 条相关企业记忆"
+    },
+    {
+      "tool": "draft_document",
+      "arguments": { "format": "product_plan", "sections": ["目标", "用户", "风控模型", "交付路径"] },
+      "observation": "生成产品方案草稿"
+    }
+  ],
+  "final": "供应链金融风控平台产品方案 v1",
+  "labels": {
+    "accepted": true,
+    "quality_score": 0.88,
+    "risk_level": "low",
+    "training_scope": "enterprise_private"
+  }
+}</pre>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十三、质量评分体系</h2>
+          <p class="section-desc">不是每条 Trace 都值得训练，TraceOps 需要一套质量和风险评分。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-4">
+        <div class="card">
+          <span class="tag green">成功度</span>
+          <div class="metric"><strong>0.86</strong><span>goal score</span></div>
+          <p class="small">是否完成用户目标，是否通过负责人或系统验收。</p>
+        </div>
+        <div class="card">
+          <span class="tag blue">链路价值</span>
+          <div class="metric"><strong>高</strong><span>trace value</span></div>
+          <p class="small">是否包含复杂拆解、工具调用、错误修复或组织协同。</p>
+        </div>
+        <div class="card">
+          <span class="tag amber">可训练性</span>
+          <div class="metric"><strong>62%</strong><span>trainable</span></div>
+          <p class="small">脱敏后是否能形成明确输入输出和质量标签。</p>
+        </div>
+        <div class="card">
+          <span class="tag red">风险等级</span>
+          <div class="metric"><strong>L2</strong><span>restricted</span></div>
+          <p class="small">是否涉及客户、源码、合同、隐私、数据库或端侧文件。</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>评分维度</th>
+            <th>高分标准</th>
+            <th>低分原因</th>
+            <th>用途</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>任务完整度</td>
+            <td>有明确目标、计划、执行、结果和验收</td>
+            <td>只有碎片聊天或中途停止</td>
+            <td>判断是否可进入候选池</td>
+          </tr>
+          <tr>
+            <td>结果质量</td>
+            <td>被负责人接受，或被后续项目复用</td>
+            <td>结果被驳回、需要大量人工重写</td>
+            <td>构造 SFT 和偏好数据</td>
+          </tr>
+          <tr>
+            <td>执行复杂度</td>
+            <td>包含多步计划、工具调用、错误修复</td>
+            <td>单轮简单问答</td>
+            <td>识别长程 Agent 能力样本</td>
+          </tr>
+          <tr>
+            <td>治理风险</td>
+            <td>敏感信息少、脱敏成本低、授权明确</td>
+            <td>包含大量客户、源码、隐私或密钥</td>
+            <td>决定训练范围和审批方式</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十四、与企业记忆库的关系</h2>
+          <p class="section-desc">企业记忆库沉淀“可复用结论”，TraceOps 沉淀“结论是如何形成的”。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <span class="tag green">企业记忆库</span>
+          <h3>组织经验的稳定表达</h3>
+          <ul class="list">
+            <li>项目复盘结论。</li>
+            <li>最佳实践。</li>
+            <li>业务规则。</li>
+            <li>知识口径。</li>
+            <li>可被问答和检索的经验。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag violet">TraceOps</span>
+          <h3>组织经验的形成过程</h3>
+          <ul class="list">
+            <li>谁提出了目标。</li>
+            <li>Agent 如何拆解。</li>
+            <li>工具如何执行。</li>
+            <li>错误如何修复。</li>
+            <li>结果如何被确认。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <p class="small">
+        两者应该互相连接：高质量 Trace 可以提炼成企业记忆；企业记忆又会成为下一次 Trace 的上下文输入。
+        TraceOps 负责保留过程，企业记忆库负责沉淀结论。
+      </p>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十五、落地路线</h2>
+          <p class="section-desc">TraceOps 不需要第一天就变成训练平台，应该先把记录和回放做扎实，再逐步治理、提炼和反哺。</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>阶段</th>
+            <th>建设目标</th>
+            <th>关键能力</th>
+            <th>验收标准</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Phase 1</td>
+            <td>先留全</td>
+            <td>统一 trace_id、事件协议、KodaX/Space/AgentOS 基础采集</td>
+            <td>任意一次项目任务可以追溯完整链路</td>
+          </tr>
+          <tr>
+            <td>Phase 2</td>
+            <td>能看懂</td>
+            <td>Trace 回放、时间线、节点图、工具调用表、产物列表</td>
+            <td>项目负责人能复盘“结果怎么来的”</td>
+          </tr>
+          <tr>
+            <td>Phase 3</td>
+            <td>能治理</td>
+            <td>脱敏、数据分级、训练授权、审批、保留周期</td>
+            <td>Trace 是否可训练有明确状态和审批记录</td>
+          </tr>
+          <tr>
+            <td>Phase 4</td>
+            <td>能提炼</td>
+            <td>高价值 Trace 候选、质量评分、失败修复链路提取</td>
+            <td>能自动生成候选训练样本和企业记忆候选</td>
+          </tr>
+          <tr>
+            <td>Phase 5</td>
+            <td>能导出</td>
+            <td>JSONL、Parquet、OpenAI fine-tune、内部训练格式</td>
+            <td>数据集可版本化、可追溯、可审批导出</td>
+          </tr>
+          <tr>
+            <td>Phase 6</td>
+            <td>能反哺</td>
+            <td>模型评测、Agent 配置优化、Skill 排序、路由策略更新</td>
+            <td>新模型或新策略在真实评测集上持续提升</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十六、MVP 版本建议</h2>
+          <p class="section-desc">第一版不要做成庞大的训练平台，而是先做 AgentOS 的 Trace 记录、回放和候选池。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="tag blue">P0</span>
+          <h3>Trace Viewer</h3>
+          <p class="small">在项目页支持查看一次任务的 Trace 时间线，包括 ProjectAgent 拆解、PAT 分发、Space 执行和结果回传。</p>
+        </div>
+        <div class="card">
+          <span class="tag blue">P0</span>
+          <h3>Trace ID 打通</h3>
+          <p class="small">AgentOS、PAT、Space、KodaX 使用同一 trace_id，保证一次任务跨系统可追踪。</p>
+        </div>
+        <div class="card">
+          <span class="tag blue">P0</span>
+          <h3>训练授权状态</h3>
+          <p class="small">每条 Trace 至少有“禁止训练、待审批、企业内可训练、公开可训练”四种状态。</p>
+        </div>
+        <div class="card">
+          <span class="tag green">P1</span>
+          <h3>高价值候选</h3>
+          <p class="small">自动把成功完成、负责人确认、失败后修复成功的 Trace 标记为候选样本。</p>
+        </div>
+        <div class="card">
+          <span class="tag green">P1</span>
+          <h3>基础脱敏</h3>
+          <p class="small">对姓名、手机号、邮箱、密钥、客户名、数据库字段、文件路径做基础识别和遮罩。</p>
+        </div>
+        <div class="card">
+          <span class="tag green">P1</span>
+          <h3>JSONL 导出</h3>
+          <p class="small">支持将已授权 Trace 导出为基础 instruction 数据和 tool trajectory 数据。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十七、风险与边界</h2>
+          <p class="section-desc">TraceOps 的价值很大，但不能牺牲企业安全和员工信任。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <span class="tag red">主要风险</span>
+          <ul class="list">
+            <li>把敏感业务数据、客户数据或源码误导出训练。</li>
+            <li>Trace 太脏，直接训练会放大错误行为。</li>
+            <li>只重视成功样本，忽略失败修复过程的价值。</li>
+            <li>记录过度细节，导致员工对端侧 Agent 缺少信任。</li>
+            <li>没有版本和血缘，训练后无法追溯数据来源。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="tag green">设计原则</span>
+          <ul class="list">
+            <li>默认最小采集，按场景逐步增加。</li>
+            <li>端侧敏感数据默认不出端。</li>
+            <li>训练数据必须经过治理状态机。</li>
+            <li>原始 Trace、清洗 Trace、训练 Trace 严格分层。</li>
+            <li>所有导出都可追溯、可撤回、可审计。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>十八、战略价值总结</h2>
+          <p class="section-desc">TraceOps 可以让 AgentOS 从“企业智能体管理系统”升级为“企业智能体经验资产操作系统”。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card dark">
+          <span class="tag">对 KodaX</span>
+          <h3>让执行内核持续进化</h3>
+          <p class="small">真实 coding、工具调用、修复路径和测试反馈会反过来优化 KodaX Agent 内核。</p>
+        </div>
+        <div class="card dark">
+          <span class="tag">对 Space</span>
+          <h3>让端侧任务形成复利</h3>
+          <p class="small">每个员工电脑上的任务执行经验不再散落，而是可治理地回流到企业智能底座。</p>
+        </div>
+        <div class="card dark">
+          <span class="tag">对 AgentOS</span>
+          <h3>让管理系统变成数据飞轮</h3>
+          <p class="small">项目、组织、审批、记忆和训练全部被一条 Trace 资产链路串起来。</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="quote">
+        未来最强的企业 Agent，不一定来自最大的模型，而可能来自拥有最多真实任务 Trace、最强治理能力和最快自蒸馏闭环的系统。
+      </div>
+    </section>
+
+    <footer>
+      TraceOps 概念设计稿 · 企业智能体运行经验沉淀与自蒸馏系统 · 建议后续补充接口定义、事件协议和治理状态机
+    </footer>
+  </main>
+</body>
+</html>

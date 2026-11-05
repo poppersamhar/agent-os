@@ -1,126 +1,167 @@
 # AgentOS
 
-> AI-native 项目协同管理平台 —— 你的数字员工操作系统
-> 版本：v0.1.0 | 状态：In Progress
+**一个输入入口，把想法、项目、任务和工作成果连在一起。**
 
----
+AgentOS 探索一种以 OrgAgent 为中心的工作方式：用自然语言提出目标，在同一个工作空间查看进展、补充要求、浏览成果，再回到项目中继续推进。
 
-## 产品概述
+当前版本为 **v0.2.0 前端交互原型**。默认打开新的统一工作空间，内置品牌升级、供应链风控和数据中台等示例。无需账号、API Key 或后端即可体验。任务执行、模型选择、来源接入均为本地演示，尚未连接真实 Agent 服务。
 
-AgentOS 是一个面向 B 端团队的 AI 原生项目协同平台。核心转变是：**从「人管理任务」到「人指挥 Agent，Agent 执行任务」**。
+![提交任务：从统一输入框进入任务记录](docs/media/send-task-motion.gif)
 
-人类员工通过自然语言与 AI Agent 协作，Agent 自动拆解任务、调度数字员工执行、产出结果并沉淀知识。
+## 当前可以体验什么
 
-## v0.1.0 核心能力
+| 入口 | 交互与内容 |
+| --- | --- |
+| 启动页 | 统一输入框、三个快捷目标，以及可直接打开的示例成果 |
+| Home 工作台 | 任务总数、进行中工作、成果与来源概览；项目进度和最近成果 |
+| Home 资源 | 技能、插件与知识库的独立资源页，支持搜索、详情和相关成果浏览 |
+| 项目 | 固定示例项目与默认项目；按「待确认 / 进行中 / 已完成」查看任务 |
+| 任务记录 | 汇集文本输入和示例来源消息；搜索、打开任务、停止和继续 |
+| 成果展示 | 文档阅读、演示稿翻页、网页尺寸预览和关系图谱；左右切换任务与成果 |
+| 输入来源 | 添加飞书群聊、GitHub 或其他 IM 的示例配置，启停来源、导入示例需求 |
+| 模型偏好 | 系统默认、GPT-4o、Claude Sonnet 4.6、DeepSeek Chat；记录新任务的选择 |
+| 提交反馈 | 从输入区飞向「任务」入口的动效，抵达后更新任务计数；支持系统减少动态效果偏好 |
 
-### 已完成功能
+## 本地运行
 
-| 能力 | 说明 |
-|------|------|
-| **账号系统** | 统一密码 `123` 登录，默认 Member，Sidebar 菜单支持 Member / Admin 切换 |
-| **两栏布局** | 左侧 Sidebar（240px，可折叠）+ 右侧主内容区 |
-| **Member 首页** | 个人数据看板（Token 消耗、活跃项目、任务成功率）+ OrgAgent 对话区 |
-| **Admin 首页** | 全组织数据看板 + OrgAgent 对话区 + 组织管理导航 |
-| **项目创建** | Sidebar `[+]` 或 OrgAgent 对话触发，项目为创建者私有 |
-| **项目页** | 任务列表 + WorkAgent 对话区 + 文件 Tab（上下文 + 产物） |
-| **任务创建** | 项目内 / 独立任务两种模式 |
-| **任务执行页** | 聊天式执行流，8 种消息类型（member/workagent/question/plan/subagent/completion/system/permission）|
-| **右侧面板** | 任务树 / 项目树 两 Tab |
-| **Skills 页** | Skill 列表（预设 + 自建），Skill Creator 创建引导 |
-| **连接器页** | 外部系统与数字员工连接 |
-| **知识库页** | 全局知识图谱 + 知识源管理，与 Skills/连接器并列 |
-| **Sidebar 操作** | 项目置顶 / 重命名 / 归档删除，任务置顶 / 重命名 / 归档删除 |
-| **聊天输入** | `+` 号附件上传，Token 用量指示器 |
+需要 **Node.js 22.18.0 及以上**和 npm，推荐使用与 CI 一致的 **Node.js 24**。根目录的 `package-lock.json` 用于锁定依赖。
 
-### 三层数据流
-
-```
-任务级 context.md  ──→  项目级 context.md（自动汇总） ──→  首页上下文记忆
-```
-
-- **任务级**：单个任务执行过程中 WorkAgent 维护的上下文
-- **项目级**：所有任务 context.md 自动汇总，项目页产物卡片置顶展示
-- **首页级**：点击项目 context.md 可 `@引用` 到 OrgAgent 输入框
-
-## 产品架构
-
-```
-┌─────────────────────────────────────────────┐
-│  第一层：企业效能管理智能体（OrgAgent）         │
-│  全局视角：跨项目分析、风险监控、审批汇集       │
-├─────────────────────────────────────────────┤
-│  第二层：管理智能体（WorkAgent）               │
-│  任务编排：需求解析 → 方案规划 → 数字员工调度   │
-├─────────────────────────────────────────────┤
-│  第三层：数字员工（Sub-Agent / Skill / Tool）  │
-│  原子执行：数据采集、代码生成、报告撰写...     │
-└─────────────────────────────────────────────┘
-```
-
-参考：`docs/ARCHITECTURE.md`
-
-## 项目结构
-
-```
-agent-os/
-├── src/
-│   ├── components/          # React 组件
-│   │   ├── App.tsx          # 路由 + 状态管理
-│   │   ├── Sidebar.tsx      # 侧边导航
-│   │   ├── Dashboard.tsx    # 首页数据看板
-│   │   ├── ProjectView.tsx  # 项目页
-│   │   ├── TaskSpace.tsx    # 任务执行页（核心）
-│   │   ├── KnowledgeGraph.tsx # 知识图谱可视化（全局 + 项目级）
-│   │   ├── KnowledgePage.tsx # 知识库页（全局知识图谱 + 知识源）
-│   │   ├── SkillPage.tsx    # Skills 列表页
-│   │   ├── ConnectorPage.tsx # 连接器页
-│   │   └── LoginPage.tsx    # 登录页
-│   ├── data/
-│   │   └── mockData.ts      # Mock 数据（4 个完整任务对话流）
-│   ├── types/
-│   │   └── workagent.ts     # 核心类型定义
-│   └── contexts/
-│       └── ThemeContext.tsx # 主题管理
-├── docs/
-│   ├── AgentOS_PRD_v0.1.0.md    # 产品需求文档
-│   ├── ARCHITECTURE.md          # 系统架构设计
-│   └── GRAPH_UI_SPEC.md         # 图谱 UI 规范
-├── features/
-│   └── v0.1.0.md                # v0.1.0 Feature 设计文档
-├── FEATURE_LIST.md              # Feature 追踪总表（36 个 Feature）
-├── backend/                     # 后端源码（NestJS）
-└── package.json
-```
-
-## 技术栈
-
-- **前端**：React 18 + TypeScript + Vite + Tailwind CSS v4
-- **后端**：NestJS（`backend/` 目录）
-- **构建**：pnpm + Vite
-
-## 快速开始
+在仓库根目录执行：
 
 ```bash
-# 安装依赖
-pnpm install
-
-# 启动开发服务器
-pnpm dev
-
-# 构建
-pnpm build
+npm install
+npm run dev
 ```
 
-## 文档导航
+打开终端显示的本地地址，默认是 [http://localhost:5173](http://localhost:5173)。端口被占用时，以 Vite 输出为准。
 
-| 文档 | 说明 |
-|------|------|
-| [FEATURE_LIST.md](FEATURE_LIST.md) | **Feature 追踪总表**（36 个 Feature，含优先级、状态、验收标准）|
-| [features/v0.1.0.md](features/v0.1.0.md) | v0.1.0 版本详细设计文档 |
-| [docs/AgentOS_PRD_v0.1.0.md](docs/AgentOS_PRD_v0.1.0.md) | 产品需求文档（概念定义 + 用户角色 + 核心流程）|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构设计（三层架构 + Anthropic Managed Agents 映射）|
-| [docs/GRAPH_UI_SPEC.md](docs/GRAPH_UI_SPEC.md) | 知识图谱 UI 设计规范 |
+构建并预览：
 
----
+```bash
+npm run build
+npm run preview
+```
 
-*AgentOS © 2026*
+构建结果输出到 `dist/`，预览默认地址为 [http://localhost:4173](http://localhost:4173)。`preview` 用于检查本地构建结果。
+
+复现锁文件中的依赖或在 CI 中安装时，可以用 `npm ci` 替代 `npm install`。
+
+## 建议体验顺序
+
+1. **从一句话开始**：在启动页输入「帮我制作品牌升级项目汇报演示稿」，按 Enter 发送。Shift + Enter 换行；也可点击快捷目标。
+2. **看任务如何展开**：发送后进入工作区，查看任务需求、阶段进展和成果。普通新任务会通过定时器在约四秒内完成演示。
+3. **继续同一项工作**：打开任务后输入「补充：面向销售团队，控制在六页」。这类补充会累积到原任务，保留任务身份与历史；输入「新任务：整理供应链风险报告」可明确开启另一项任务。
+4. **查看记录和项目**：点击「任务」，或使用 ⌘K / Ctrl+K 打开记录。点击头像下方的项目圆环切换到项目看板，打开任务后查看对应需求与成果。
+5. **进入 Home**：点击底部 `H` 查看我的工作台，再从右侧进入技能、插件或知识库。启动页的「看看我的工作台」也能直接进入。
+6. **尝试多来源**：在工作区点击输入来源的 `+`，填写来源类型、显示名和可选链接，再点击「导入一条示例需求」。来源标识会跟随消息显示在记录和项目看板中。
+7. **查看多种状态**：右上角账户菜单选择「添加示例任务」，加入六项跨来源示例，覆盖进行中、已完成和待继续状态。重复添加不会产生重复任务。
+
+点击左上角 AgentOS 标识可返回启动页，已有任务仍会保留。Escape 可关闭任务记录或浮层。
+
+### 任务上下文与项目归属
+
+- 每项任务保留首次需求和补充消息，成果上方可查看对应的需求记录。
+- 当前演示通过文本规则识别「补充」「改成」「继续」等后续要求；它不是模型驱动的意图理解。要开始独立工作，可使用「新任务：」前缀。
+- 在项目看板中提交的新任务归入当前项目；没有项目范围的新任务归入「默认项目」。缺失或无效的历史项目 ID 也会归入默认项目。
+- 补充要求沿用原任务的项目、来源和模型偏好。输入框的新模型选择用于后续创建的任务。
+- 示例成果按项目组织；一项任务可以关联多种形式的成果，展示区支持横向切换。
+
+### 本地保存与重置
+
+对话、任务、草稿、当前成果选择、来源配置和模型偏好保存在当前浏览器的 `localStorage` 中。
+
+| 存储键 | 内容 |
+| --- | --- |
+| `agentos-unified-workspace-v1` | 工作空间状态、消息与任务 |
+| `agentos-input-sources-v1` | 示例来源配置及启停状态 |
+| `agentos-composer-model-v1` | 输入框模型偏好 |
+
+刷新后，用户提交的进行中任务会恢复为暂停，可手动继续；预置示例任务保持其演示状态。账户菜单中的「重置交互演示」会清空工作空间对话与任务，保留来源配置和模型偏好。需要完全重新开始时，可清除该站点的浏览器存储。
+
+这些记录不跨浏览器或设备同步。附件只显示并记录名称，文件内容不会解析或上传；尚未发送的附件选择不会随刷新恢复。
+
+## 开发指南
+
+技术栈：React 19、TypeScript 6、Vite 8、Tailwind CSS 4，以及 Lucide 图标。新版工作空间的样式主要位于组件同目录的 CSS 文件。
+
+```text
+agent-os/
+├── src/
+│   ├── main.tsx                  # React 入口与图谱演示路径
+│   ├── App.tsx                   # 默认工作空间 / legacy 入口选择
+│   ├── components/agentos/        # 新版统一工作空间
+│   │   ├── UnifiedWorkspace.tsx   # 页面组合、导航、状态与演示调度
+│   │   ├── workspaceModel.ts      # 任务状态、恢复与成果映射
+│   │   ├── WorkspaceComposer.tsx  # 统一输入、附件与模型选择
+│   │   ├── SessionCanvas.tsx      # 任务需求和成果浏览
+│   │   ├── ProjectBoard.tsx       # 项目任务看板
+│   │   ├── UserHomeDashboard.tsx  # Home 概览
+│   │   ├── HomeResourcePage.tsx   # Home 资源页
+│   │   └── InputSources.tsx       # 来源配置与示例导入
+│   ├── data/agentosArtifacts.ts   # 示例项目、成果及类型
+│   └── api/workagent.ts           # 历史 WorkAgent API 客户端
+├── tests/                        # 项目归属、任务连续性、看板与示例数据检查
+├── backend/                      # 独立 Express + WebSocket 后端原型
+├── public/                       # 静态资源与独立 HTML 演示
+├── docs/                         # 产品、架构文档与演示动图
+└── .github/workflows/             # 前端 CI 检查
+```
+
+常见修改入口：
+
+- 调整示例项目与成果：`src/data/agentosArtifacts.ts`；调整多来源示例任务：`workspaceDemoData.ts`。
+- 调整任务状态与本地恢复：`workspaceModel.ts`；调整补充要求识别：`taskContinuation.ts`。
+- 调整项目聚合：`projectBoardModel.ts`、`homeProjectModel.ts`、`projectActivity.ts`。
+- 调整模型菜单：`composerModels.ts`；调整发送动效：`useTaskDispatchMotion.tsx`、`TaskDispatchFlight.tsx`。
+- 接入真实执行服务：从 `UnifiedWorkspace.tsx` 中的 `send` 和 `DemoWorker` 入手，替换本地演示调度，并补充服务端任务状态及成果协议。
+
+上文未带目录的文件均位于 `src/components/agentos/`。
+
+### 检查命令
+
+```bash
+npm run lint:workspace
+npm test
+npm run build
+```
+
+- `lint:workspace` 检查新版工作空间目录与 `agentosArtifacts.ts`。
+- `test` 使用 Node 原生 TypeScript 支持，检查任务归属、补充消息连续性、项目看板和示例数据恢复等状态规则。
+- `build` 先进行 TypeScript 构建检查，再生成 Vite 产物。
+
+GitHub Actions 使用 Node.js 24，前端依次执行 `npm ci` 和以上三项检查，并单独安装和编译历史后端。这些检查不覆盖完整浏览器交互；修改界面后还需在本地确认布局、键盘操作、滚动和动效。
+
+`npm run lint` 会扫描整个仓库，目前历史界面和后端仍有待修复的规则问题，因此它尚不是 CI 的通过条件。
+
+## 当前边界与历史入口
+
+新版是交互原型：任务进展由定时器模拟，成果由内置样例映射而来；模型菜单只记录偏好，来源链接只保存为配置。当前没有真实群聊订阅、GitHub Issue 同步、文件解析、Agent 执行、模型调用或多人协作服务。技能和插件目录用于预览工作方式，项目列表也是预置数据。
+
+仓库同时保留两个独立演示入口：
+
+- 在地址后添加 `?view=legacy` 可打开早期多页面界面，用于参考此前的项目、技能、连接器和知识库设计。
+- 访问 `/knowledge-graph-demo` 可查看独立知识图谱演示。
+
+`backend/` 保留会话、工具、Skill、LLM Provider 和 WebSocket 原型，**默认新版工作空间尚未调用它**。仅启动后端不会让新版任务变成真实执行。它面向本地开发研究，未提供生产部署所需的认证与访问控制。如需单独研究后端，可另开终端：
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm run dev
+```
+
+示例环境默认使用 `LLM_PROVIDER=mock`；后端默认端口为 `3001`。其 `npm run build` 与 `npm start` 分别用于编译和运行编译结果。真实 Provider 配置见 `backend/.env.example`，密钥仅应配置在服务端。
+
+## 相关资料
+
+| 资料 | 用途 |
+| --- | --- |
+| [产品介绍 v1.4](docs/AgentOS_产品介绍_售前版_v1.4.md) | 产品定位与业务场景 |
+| [系统架构](docs/ARCHITECTURE.md) | OrgAgent / WorkAgent / 数字员工的架构探索 |
+| [早期 PRD](docs/AgentOS_PRD_v0.1.0.md) | v0.1.0 概念、角色与流程 |
+| [Feature 总表](FEATURE_LIST.md) 与 [早期版本设计](features/v0.1.0.md) | 历史功能规划与实现记录 |
+| [图谱 UI 规范](docs/GRAPH_UI_SPEC.md) | 知识图谱交互参考 |
+| [KodaX / TraceOps 上下文草稿](docs/KodaX_TraceOps_Context.md) 与 [TraceOps 演示草稿](public/traceops-agent-trace-system.html) | 相关方案背景与设计探索 |
+
+以上设计资料包含历史规划，当前可运行能力以本 README 和源码为准。

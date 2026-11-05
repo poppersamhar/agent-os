@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint:workspace": "eslint src/components/agentos src/data/agentosArtifacts.ts",
+    "test": "node tests/project-task-check.mjs && node tests/project-board-check.mjs && node tests/demo-seed-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -34,5 +36,8 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
     "vite": "^8.0.4"
+  },
+  "engines": {
+    "node": ">=22.18.0"
   }
 }

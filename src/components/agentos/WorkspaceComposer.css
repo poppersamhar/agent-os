@@ -1,0 +1,17 @@
+.aos-composer .aos-composer-add { flex: 0 0 30px; width: 30px; height: 30px; color: #30312b; }
+.aos-composer-controls { display: flex; align-items: center; gap: 9px; min-width: 0; margin-left: auto; }
+.aos-composer-model-picker { position: relative; display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 5px 4px 5px 6px; border-radius: 6px; color: #55574d; font-size: 12px; line-height: 20px; cursor: pointer; }
+.aos-composer-model-picker:hover { background: #f5f5f1; }
+.aos-composer-model-picker:focus-within { outline: 2px solid #777; outline-offset: 2px; }
+.aos-composer-model-picker > svg { flex-shrink: 0; }
+.aos-composer-model-picker > svg:last-of-type { color: #96998d; }
+.aos-composer-model-name { min-width: 0; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aos-composer-model-picker select { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.aos-composer-controls .aos-send-button { flex-shrink: 0; margin-left: 0; border-radius: 50%; }
+.aos-work-record-model { display: block; margin: -3px 0 11px; color: #a0a68f; font-size: 9px; }
+@media (max-width: 600px) {
+  .aos-composer .aos-composer-mode { display: none; }
+  .aos-composer-controls { gap: 7px; }
+  .aos-composer-model-picker { gap: 5px; font-size: 11px; padding-inline: 4px; }
+  .aos-composer-model-name { max-width: 120px; }
+}
