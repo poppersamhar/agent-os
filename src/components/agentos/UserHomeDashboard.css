@@ -1,4 +1,4 @@
-.aos-user-home { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 30px clamp(22px, 4vw, 60px) 42px; color: #2b2b2b; background: #fafafa; scrollbar-width: thin; scrollbar-color: #d4d4d4 transparent; }
+.aos-user-home { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 30px clamp(22px, 4vw, 60px) 42px; color: #2b2b2b; background: transparent; scrollbar-width: thin; scrollbar-color: #d4d4d4 transparent; }
 .aos-user-home button, .aos-user-home input { font: inherit; }
 .aos-user-home button { cursor: pointer; }
 .aos-user-home button:focus-visible, .aos-user-home input:focus-visible { outline: 2px solid #878787; outline-offset: 3px; }
@@ -90,7 +90,7 @@
   gap: var(--aos-home-gap);
   min-width: 0;
   overflow: hidden;
-  padding-inline: var(--aos-home-inset);
+  padding-inline: 0;
   padding-bottom: var(--aos-home-inset);
 }
 .aos-shell--experience .aos-user-home.aos-user-home--overview {

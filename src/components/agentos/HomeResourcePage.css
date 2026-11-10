@@ -7,7 +7,7 @@
   overflow: hidden auto;
   overscroll-behavior: contain;
   color: #303128;
-  background: #fafafa;
+  background: transparent;
   scrollbar-width: thin;
   scrollbar-color: #d4d7cc transparent;
 }

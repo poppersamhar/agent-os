@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type Dispatch } from 'react';
-import { ArrowUpRight, CircleHelp, FileText, Globe, Hexagon, Network, Presentation, X, type LucideIcon } from 'lucide-react';
-import { DEFAULT_PROJECT_ID, agentosArtifacts, agentosProjects, artifactTypeLabels, normalizeProjectId, type Artifact } from '../../data/agentosArtifacts';
+import { ArrowUpRight, Hexagon, X } from 'lucide-react';
+import { DEFAULT_PROJECT_ID, agentosArtifacts, agentosProjects, artifactTypeLabels, normalizeProjectId } from '../../data/agentosArtifacts';
 import WorkspaceComposer from './WorkspaceComposer';
 import WorkRecords from './WorkRecords';
 import { demoWorkJobs, demoWorkMessages } from './workspaceDemoData';
@@ -20,13 +20,7 @@ import useTaskDispatchMotion from './useTaskDispatchMotion';
 import './UnifiedWorkspace.css';
 import './WorkspaceExperience.css';
 
-const typeIcons: Record<Artifact['type'], LucideIcon> = { document: FileText, slides: Presentation, web: Globe, graph: Network };
 const phases = ['理解目标与整理上下文', '组织内容与生成成果', '检查内容与准备交付'];
-const quickStarts = [
-  { icon: FileText, title: '梳理一个想法', text: '把产品构思整理成一份清晰的方案' },
-  { icon: Presentation, title: '准备一份演示', text: '帮我制作品牌升级项目汇报演示稿' },
-  { icon: Globe, title: '做一个网页', text: '生成一个品牌产品介绍网页' },
-];
 const SOURCE_KEY = 'agentos-input-sources-v1';
 const now = () => new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 const message = (text: string, extra?: Partial<ConversationMessage>): ConversationMessage => ({ id: crypto.randomUUID(), role: 'assistant', text, time: now(), ...extra });
@@ -50,15 +44,6 @@ function DemoWorker({ job, dispatch }: { job: WorkerJob; dispatch: Dispatch<Work
   }, [id, attempt, title, artifactId, dispatch]);
   return null;
 }
-function Welcome({ onOpen }: { onOpen: (id: string) => void }) {
-  return <div className="aos-welcome-artifacts" aria-label="最近的工作成果">{agentosArtifacts.slice(0, 7).map((artifact, index) => {
-    const Icon = typeIcons[artifact.type];
-    return <button key={artifact.id} type="button" className={`aos-orbit-card aos-orbit-card--${index + 1}`} onClick={() => onOpen(artifact.id)} aria-label={`查看成果：${artifact.title}`}>
-      <span className="aos-orbit-kind"><Icon size={14} strokeWidth={1.4} />{artifactTypeLabels[artifact.type]}<ArrowUpRight size={13} /></span>
-      <strong>{artifact.title}</strong><p>{artifact.summary}</p><span className="aos-orbit-project">{agentosProjects.find(p => p.id === artifact.projectId)?.name}<span>{artifact.version}</span></span>
-    </button>;
-  })}</div>;
-}
 interface AgentNotice { id: string; title: string; text: string; kind: 'running' | 'completed' | 'todo' | 'reply'; artifactId?: string; collectionId?: string }
 const initialNotices: AgentNotice[] = [
   { id: 'risk-followup', title: '风险事项待确认', text: '两项供应链风险还需要核验。请确认交付节点与资料补充安排。', kind: 'todo', artifactId: 'risk-dashboard', collectionId: 'project:p_risk' },
@@ -68,8 +53,7 @@ const initialNotices: AgentNotice[] = [
 
 export default function UnifiedWorkspace() {
   const [state, dispatch] = useReducer(workspaceReducer, null, () => { try { return restoreWorkspace(localStorage.getItem(STORAGE_KEY)); } catch { return restoreWorkspace(null); } });
-  const [homeOpen, setHomeOpen] = useState(false);
-  const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(true);
   const [homeResourceId, setHomeResourceId] = useState<HomeResourceId | null>(null);
   const [workOpen, setWorkOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
@@ -113,7 +97,6 @@ export default function UnifiedWorkspace() {
   const context = allArtifacts.find(a => a.id === state.contextId);
   const runningJobs = state.jobs.filter(j => j.status === 'running');
   const projectActivities = useMemo(() => Object.fromEntries(agentosProjects.map(project => [project.id, projectActivity(project.id, state.jobs, agentosArtifacts)])), [state.jobs]);
-  const working = !homeOpen && (state.messages.length > 0 || !!state.selectedId || dashboardOpen || workOpen || !!projectScopeId);
   const notices = useMemo<AgentNotice[]>(() => [
     ...state.messages.filter(m => m.role === 'assistant' && !m.jobId).slice(-2).reverse().map(m => ({ id: m.id, title: 'OrgAgent 回复', text: m.text, kind: 'reply' as const })),
     ...state.jobs.slice().reverse().map(job => ({ id: job.id, title: job.title, text: job.status === 'running' ? phases[Math.min(job.phase, 2)] : job.status === 'completed' ? `「${job.title}」已完成，可以查看全部成果。` : '工作已保留，等待继续。', kind: job.status === 'running' ? 'running' as const : job.status === 'completed' ? 'completed' as const : 'todo' as const, artifactId: job.artifactId, collectionId: `session:${job.id}` })),
@@ -126,12 +109,12 @@ export default function UnifiedWorkspace() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { setSourcesOpen(false); setAccountOpen(false); setActiveNotice(null); if (workOpen) { setWorkOpen(false); workTrigger.current?.focus(); } }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setHomeOpen(false); setWorkOpen(v => !v); setAccountOpen(false); }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setWorkOpen(v => !v); setAccountOpen(false); }
     };
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   }, [workOpen]);
   const openArtifact = useCallback((id: string, collectionId?: string) => {
-    dispatch({ type: 'select', id }); setHomeOpen(false); setDashboardOpen(false); setProjectBoardOpen(false); setAccountOpen(false); setSourcesOpen(false); setActiveNotice(null);
+    dispatch({ type: 'select', id }); setDashboardOpen(false); setProjectBoardOpen(false); setAccountOpen(false); setSourcesOpen(false); setActiveNotice(null);
     const job = state.jobs.find(j => j.artifactId === id);
     const artifact = agentosArtifacts.find(a => a.id === id);
     const projectId = normalizeProjectId(job?.projectId ?? artifact?.projectId);
@@ -140,7 +123,7 @@ export default function UnifiedWorkspace() {
   }, [state.jobs]);
   const openProject = (projectId: string) => {
     setProjectBoardOpen(true);
-    setProjectScopeId(projectId); setHomeOpen(false); setDashboardOpen(false); setWorkOpen(false); setAccountOpen(false); setSourcesOpen(false); setActiveNotice(null);
+    setProjectScopeId(projectId); setDashboardOpen(false); setWorkOpen(false); setAccountOpen(false); setSourcesOpen(false); setActiveNotice(null);
     if (context) dispatch({ type: 'context', id: null });
   };
   const cancelJob = (job: WorkerJob) => dispatch({ type: 'cancel', id: job.id, message: message(`已停止「${job.title}」，任务记录和已有成果已保留。`) });
@@ -149,7 +132,7 @@ export default function UnifiedWorkspace() {
     if (source && !sources.some(item => item.id === source.id && item.enabled)) return;
     const text = (preset ?? state.draft).trim();
     if (!text && !attachments.length) return;
-    setHomeOpen(false); setDashboardOpen(false); setSourcesOpen(false); setActiveNotice(null);
+    setDashboardOpen(false); setSourcesOpen(false); setActiveNotice(null);
     const input = text || '请帮我整理这些资料';
     const userMessage = message(`${input}${!source && attachments.length ? `\n附件：${attachments.map(f => f.name).join('、')}` : ''}`, { role: 'user', sourceName: source?.name, sourceKind: source?.kind });
     if (!source && /^(你好|hi|hello|你是谁|你能做什么)[？?！!。\s]*$/i.test(input)) {
@@ -174,7 +157,7 @@ export default function UnifiedWorkspace() {
       else { const reply = message(runningJobs.length ? '请告诉我完整的任务名称，或在“任务”中停止对应工作。' : '目前没有正在执行的任务。'); dispatch({ type: 'message', message: reply }); setActiveNotice({ id: reply.id, title: 'OrgAgent', text: reply.text, kind: 'reply' }); }
       dispatch({ type: 'draft', text: '' }); setAttachments([]); return;
     }
-    const continuingJob = !source && !homeOpen && !dashboardOpen && !projectBoardOpen && isTaskContinuation(input, displayedJob) ? displayedJob : undefined;
+    const continuingJob = !source && !dashboardOpen && !projectBoardOpen && isTaskContinuation(input, displayedJob) ? displayedJob : undefined;
     if (continuingJob) {
       const note = message('补充要求已加入当前任务，会结合前面的消息一起处理。', { jobId: continuingJob.id });
       if (preset === undefined) taskDispatchMotion.launch(false);
@@ -199,8 +182,7 @@ export default function UnifiedWorkspace() {
     if (!source) setAttachments([]);
     else { dispatch({ type: 'draft', text: state.draft }); dispatch({ type: 'context', id: state.contextId }); }
   };
-  const returnStart = () => { setHomeOpen(true); setDashboardOpen(false); setProjectBoardOpen(false); setProjectScopeId(null); setWorkOpen(false); setSourcesOpen(false); setAccountOpen(false); setActiveNotice(null); requestAnimationFrame(() => composerRef.current?.focus()); };
-  const openDashboard = () => { setHomeOpen(false); setDashboardOpen(true); setHomeResourceId(null); setProjectBoardOpen(false); setProjectScopeId(null); setWorkOpen(false); setActiveNotice(null); setSourcesOpen(false); setAccountOpen(false); };
+  const openDashboard = () => { setDashboardOpen(true); setHomeResourceId(null); setProjectBoardOpen(false); setProjectScopeId(null); setWorkOpen(false); setActiveNotice(null); setSourcesOpen(false); setAccountOpen(false); };
   const loadDemoWork = () => {
     if (!selectedCollectionId && state.selectedId) {
       const selectedJob = state.jobs.find(job => job.artifactId === state.selectedId);
@@ -208,18 +190,17 @@ export default function UnifiedWorkspace() {
       setSelectedCollectionId(selectedJob ? `session:${selectedJob.id}` : selectedArtifact ? `project:${selectedArtifact.projectId}` : null);
     }
     dispatch({ type: 'seed-demo', jobs: demoWorkJobs, messages: demoWorkMessages });
-    setHomeOpen(false); setDashboardOpen(false); setWorkOpen(true); setAccountOpen(false); setActiveNotice(null);
+    setDashboardOpen(false); setWorkOpen(true); setAccountOpen(false); setActiveNotice(null);
   };
-  const composer = <WorkspaceComposer dock={working} value={state.draft} onChange={text => dispatch({ type: 'draft', text })} onSend={() => send()} context={context} onClearContext={() => dispatch({ type: 'context', id: null })} attachments={attachments} onAttachments={setAttachments} inputRef={composerRef} modelId={modelId} onModelChange={changeModel} />;
-  return <div className={`aos-shell ${working ? 'aos-shell--experience' : 'aos-shell--welcome'}`} style={{ '--aos-project-count': agentosProjects.length } as CSSProperties}>
+  const composer = <WorkspaceComposer dock value={state.draft} onChange={text => dispatch({ type: 'draft', text })} onSend={() => send()} context={context} onClearContext={() => dispatch({ type: 'context', id: null })} attachments={attachments} onAttachments={setAttachments} inputRef={composerRef} modelId={modelId} onModelChange={changeModel} />;
+  return <div className={`aos-shell aos-shell--experience${dashboardOpen ? ' aos-shell--home' : ''}`} style={{ '--aos-project-count': agentosProjects.length } as CSSProperties}>
     {runningJobs.filter(job => !job.demo).map(job => <DemoWorker key={`${job.id}-${job.attempt}`} job={job} dispatch={dispatch} />)}
-    <header className="aos-header"><div className="aos-header-identity"><button type="button" className={`aos-brand${workOpen || dashboardOpen ? ' aos-brand--labeled' : ''}`} aria-label="返回启动页" title="返回启动页" onClick={returnStart}><Hexagon size={22} fill="currentColor" strokeWidth={1.5} /><span>AgentOS<span className="aos-brand-dot">.</span></span></button>{working && !dashboardOpen && (displayedTaskName || scopedProject) ? <div className="aos-task-location" aria-label="当前项目与任务"><span>{displayedProject?.name ?? '默认项目'}</span>{!projectBoardOpen && displayedTaskName ? <><span aria-hidden="true">｜</span><strong title={displayedTaskName}>{displayedTaskName}</strong></> : null}</div> : null}</div><button type="button" className="aos-avatar" aria-label="账户与工作空间" aria-expanded={accountOpen} onClick={() => setAccountOpen(v => !v)}>S</button></header>
-    {working ? dashboardOpen
+    <header className="aos-header"><div className="aos-header-identity"><button type="button" className={`aos-brand${workOpen || dashboardOpen ? ' aos-brand--labeled' : ''}`} aria-label="返回工作台" title="返回工作台" onClick={openDashboard}><Hexagon size={22} fill="currentColor" strokeWidth={1.5} /><span>AgentOS<span className="aos-brand-dot">.</span></span></button>{!dashboardOpen && (displayedTaskName || scopedProject) ? <div className="aos-task-location" aria-label="当前项目与任务"><span>{displayedProject?.name ?? '默认项目'}</span>{!projectBoardOpen && displayedTaskName ? <><span aria-hidden="true">｜</span><strong title={displayedTaskName}>{displayedTaskName}</strong></> : null}</div> : null}</div><button type="button" className="aos-avatar" aria-label="账户与工作空间" aria-expanded={accountOpen} onClick={() => setAccountOpen(v => !v)}>S</button></header>
+    {dashboardOpen
       ? <HomeResourceRail selectedId={homeResourceId} onSelect={setHomeResourceId} />
-      : <ProjectRail projects={agentosProjects} selectedId={displayedProject?.id} activity={projectActivities} onSelect={openProject} /> : null}
-    {accountOpen ? <><button className="aos-popover-dismiss" aria-label="关闭账户菜单" onClick={() => setAccountOpen(false)} /><div className="aos-header-popover aos-header-popover--account"><div className="aos-account-name"><span className="aos-avatar">S</span><div><strong>samhar</strong><span>你的 AgentOS 工作空间</span></div></div><button type="button" className="aos-account-navigation" onClick={openDashboard}>我的工作台 <span>H</span></button><button type="button" className="aos-account-navigation" onClick={() => { setHomeOpen(false); setWorkOpen(true); setAccountOpen(false); }}>任务记录 <kbd>⌘K / Ctrl K</kbd></button><button type="button" className="aos-account-navigation" onClick={loadDemoWork}>添加示例任务 <span>多来源 · 三种状态</span></button><p>交互演示 · 来源配置与任务保存在本地，执行服务尚未接入。</p><a href="?view=legacy">查看原版界面 <ArrowUpRight size={14} /></a>{confirmReset ? <div className="aos-reset-confirm"><p>清空演示对话与任务？来源配置会保留。</p><button type="button" onClick={() => { dispatch({ type: 'reset' }); setHomeOpen(true); setDashboardOpen(false); setWorkOpen(false); setAccountOpen(false); setConfirmReset(false); setAttachments([]); setSelectedCollectionId(null); setProjectScopeId(null); setProjectBoardOpen(false); setActiveNotice(null); }}>确认重置演示</button><button type="button" onClick={() => setConfirmReset(false)}>保留</button></div> : <button type="button" className="aos-reset-button" onClick={() => setConfirmReset(true)}>重置交互演示</button>}</div></> : null}
-    {!working ? <><div className="aos-body"><main className="aos-main"><Welcome onOpen={id => openArtifact(id)} /><section aria-label="OrgAgent 对话" className="aos-conversation aos-conversation--welcome"><div className="aos-conversation-reading"><div className="aos-conversation-scroll"><div className="aos-welcome-copy"><div className="aos-welcome-eyebrow"><span className="aos-online-dot" />你的工作伙伴，已就位</div><h1><span>一个聊天窗，</span>{' '}<span>解决所有问题。</span></h1><p>你只管表达，剩下的，我们一起推进。</p></div></div></div>{composer}<div className="aos-quick-starts">{quickStarts.map(start => <button type="button" key={start.title} onClick={() => send(start.text)}><start.icon size={15} strokeWidth={1.4} /><span>{start.title}</span><ArrowUpRight size={12} /></button>)}</div><button type="button" className="aos-browse-work" onClick={openDashboard}>看看我的工作台 <ArrowUpRight size={13} /></button></section></main></div><footer className="aos-welcome-footer"><span>想法有来处，成果有归处。</span><button type="button" onClick={() => setAccountOpen(true)}><CircleHelp size={13} />关于这个工作空间</button></footer></>
-      : <div className="aos-experience"><div className="aos-display-layout">
+      : <ProjectRail projects={agentosProjects} selectedId={displayedProject?.id} activity={projectActivities} onSelect={openProject} />}
+    {accountOpen ? <><button className="aos-popover-dismiss" aria-label="关闭账户菜单" onClick={() => setAccountOpen(false)} /><div className="aos-header-popover aos-header-popover--account"><div className="aos-account-name"><span className="aos-avatar">S</span><div><strong>samhar</strong><span>你的 AgentOS 工作空间</span></div></div><button type="button" className="aos-account-navigation" onClick={openDashboard}>我的工作台 <span>H</span></button><button type="button" className="aos-account-navigation" onClick={() => { setWorkOpen(true); setAccountOpen(false); }}>任务记录 <kbd>⌘K / Ctrl K</kbd></button><button type="button" className="aos-account-navigation" onClick={loadDemoWork}>添加示例任务 <span>多来源 · 三种状态</span></button><p>交互演示 · 来源配置与任务保存在本地，执行服务尚未接入。</p><a href="?view=legacy">查看原版界面 <ArrowUpRight size={14} /></a>{confirmReset ? <div className="aos-reset-confirm"><p>清空演示对话与任务？来源配置会保留。</p><button type="button" onClick={() => { dispatch({ type: 'reset' }); openDashboard(); setConfirmReset(false); setAttachments([]); setSelectedCollectionId(null); }}>确认重置演示</button><button type="button" onClick={() => setConfirmReset(false)}>保留</button></div> : <button type="button" className="aos-reset-button" onClick={() => setConfirmReset(true)}>重置交互演示</button>}</div></> : null}
+    <div className="aos-experience"><div className="aos-display-layout">
         {workOpen ? <WorkRecords messages={state.messages} jobs={state.jobs} onOpen={id => openArtifact(id)} onCancel={cancelJob} onResume={resumeJob} triggerRef={workTrigger} onDismiss={dismissWork} /> : null}
         <main className="aos-display-frame" aria-label={dashboardOpen ? homeResourceId ? '资源展示区' : '用户工作台展示区' : projectBoardOpen ? '项目任务展示区' : '任务成果展示区'}>
           {dashboardOpen ? homeResourceId
@@ -232,7 +213,7 @@ export default function UnifiedWorkspace() {
         <section className="aos-message-zone" aria-label="任务消息区域"><button ref={workTrigger} type="button" className={`aos-work-toggle${workOpen ? ' is-active' : ''}`} aria-label="任务记录" aria-expanded={workOpen} onClick={() => setWorkOpen(v => !v)}>任务 <span className="aos-task-count" aria-live="polite" aria-atomic="true">{displayedTaskCount}</span></button><span className="aos-message-divider" /><div className="aos-agent-updates" aria-label="Agent 进展与推送">{notices.map(notice => <button type="button" key={notice.id} className={`aos-agent-update aos-agent-update--${notice.kind}${(notice.artifactId ? !dashboardOpen && !projectBoardOpen && (displayedJob ? displayedJob.id === notice.id : state.selectedId === notice.artifactId) : activeNotice?.id === notice.id) ? ' is-current' : ''}`} onClick={() => { if (notice.artifactId) openArtifact(notice.artifactId, notice.collectionId); else setActiveNotice(v => v?.id === notice.id ? null : notice); }} aria-label={`${notice.kind === 'running' ? '进行中' : notice.kind === 'completed' ? '已完成' : notice.kind === 'todo' ? '待处理' : 'Agent 回复'}：${notice.title}`}><span className="aos-update-dot" />{notice.title}<small>{notice.kind === 'running' ? '进行中' : notice.kind === 'completed' ? '已完成' : notice.kind === 'todo' ? '待处理' : '回复'}</small></button>)}</div>
         {visibleNotice ? <article className="aos-notice-popover" aria-label="Agent 消息详情"><header><strong>{visibleNotice.title}</strong><button type="button" className="aos-icon-button" aria-label="关闭 Agent 消息" onClick={() => setActiveNotice(null)}><X size={14} /></button></header><p>{visibleNotice.text}</p><span>{visibleNotice.kind === 'running' ? '正在推进' : visibleNotice.kind === 'todo' ? '需要你的关注' : '来自 OrgAgent'}</span></article> : null}</section>
         <section className="aos-workspace-dock" aria-label="输入来源区域"><button type="button" className={`aos-home-button${dashboardOpen ? ' is-active' : ''}`} aria-label="H 我的工作台" title="我的工作台" onClick={openDashboard}>H</button>{composer}<InputSources sources={sources} onChange={setSources} onImport={(source, request) => send(request, source)} open={sourcesOpen} onOpenChange={setSourcesOpen} /></section>
-      </div>}
+      </div>
     {taskDispatchMotion.overlay}
     {storageUnavailable ? <div className="aos-storage-note" role="status">浏览器暂时无法保存记录，本次交互仍可继续。</div> : null}
   </div>;
