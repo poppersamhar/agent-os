@@ -8,8 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "lint:workspace": "eslint src/components/agentos src/data/agentosArtifacts.ts",
-    "test": "node tests/project-task-check.mjs && node tests/project-board-check.mjs && node tests/demo-seed-check.mjs"
+    "lint:workspace": "eslint src/components/botos src/components/agentos src/data/agentosArtifacts.ts",
+    "test": "node tests/project-task-check.mjs && node tests/project-board-check.mjs && node tests/demo-seed-check.mjs && node tests/botos-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
