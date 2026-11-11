@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, CircleCheck, CircleDot, FileText, GitPullRequest, MessageSquare, TriangleAlert } from 'lucide-react';
-import { HISTORY_DAYS, MAIN_BOT_ID, composeDashboard, faceStateOf, memberBots, pendingCount, seeded, waitingFor, type Bot, type BotosState, type WaitingItem, type WidgetSlot } from './botModel';
+import { ArrowRight, BadgeCheck, Sprout, CircleCheck, CircleDot, FileText, GitPullRequest, MessageSquare, TriangleAlert } from 'lucide-react';
+import { HISTORY_DAYS, isAgent, composeDashboard, faceStateOf, memberBots, pendingCount, seeded, waitingFor, type Bot, type BotosState, type WaitingItem, type WidgetSlot } from './botModel';
 import BotAvatar from './BotAvatar';
+import type { FaceState } from './botFaces';
 
 // 固定的 Widget 组件库：Spec 只声明「放什么」，这里负责「怎么画」。
 
@@ -10,7 +11,7 @@ const whenLabel = { today: '今天', week: '本周', later: '稍后' } as const;
 interface Ctx { state: BotosState; bot: Bot; scope: Bot[]; recentlyDone: string[]; onSelectBot: (id: string) => void }
 
 function scopeBots(state: BotosState, bot: Bot): Bot[] {
-  if (bot.kind === 'main') return state.bots.filter(b => b.id !== MAIN_BOT_ID);
+  if (bot.kind === 'main') return state.bots.filter(isAgent);
   if (bot.kind === 'group') return [bot, ...state.bots.filter(b => bot.memberIds.includes(b.id))];
   return [bot];
 }
@@ -58,7 +59,7 @@ function Agents(ctx: Ctx & { members?: boolean }) {
   return <div className="bos-agents">
     <div className="bos-agents-grid">{bots.map(b => {
       const face = faceStateOf(ctx.state, b, ctx.recentlyDone);
-      const label = { working: '工作中', done: '刚完成', needs: '需要你', idle: `${b.skillIds.length} Skill · ${b.mcpIds.length} MCP` }[face];
+      const label = { working: '工作中', done: '刚完成', needs: '需要你', idle: `${b.skillIds.length} 项技能 · ${b.mcpIds.length} 个连接器` }[face];
       return <button type="button" key={b.id} className={`bos-agent bos-agent--${face}`} onClick={() => ctx.onSelectBot(b.id)} title={`打开 ${b.name}`}>
         <BotAvatar bot={b} size={42} state={face} members={memberBots(ctx.state, b)} />
         <span>{b.name}</span>
@@ -124,18 +125,18 @@ function Artifacts(ctx: Ctx) {
 
 const sampleFeed = [
   { who: '品牌升级群 · 李然', text: '首页的主视觉什么时候能定？' },
-  { who: '项目周会 · 王珂', text: '@work 帮忙把会议纪要发一下' },
+  { who: '项目周会 · 王珂', text: '@办公专家帮忙把会议纪要发一下' },
   { who: '供应商沟通群 · 陈一', text: '延期方案明天上午给到' },
 ];
 const sampleRepo = [
-  { kind: 'pr', title: '#482 feat: Bot 仪表盘 Spec 渲染', meta: '待评审 · 2 条评论' },
-  { kind: 'issue', title: '#477 MCP 凭证轮换后连接失败', meta: '高优先级 · 3 天前' },
+  { kind: 'pr', title: '#482 feat: 专家工作台 Spec 渲染', meta: '待评审 · 2 条评论' },
+  { kind: 'issue', title: '#477 连接器凭证轮换后连接失败', meta: '高优先级 · 3 天前' },
   { kind: 'pr', title: '#471 fix: 记忆导出编码问题', meta: '已通过 · 待合并' },
 ];
 const sampleSources = [
-  { title: 'Designing Grok Bot', site: 'x.ai', finding: 'Skill 与工具放在账号级，记忆属于 Bot' },
-  { title: 'Grok Bot 团队版发布', site: 'memorylake.ai', finding: '团队记忆与个人记忆分开保存' },
-  { title: 'Dify 1.9 更新说明', site: 'dify.ai', finding: '工作流支持 MCP 节点' },
+  { title: 'Designing Grok Bot', site: 'x.ai', finding: '技能与工具放在账号级，记忆属于专家' },
+  { title: 'Grok 专家团队版发布', site: 'memorylake.ai', finding: '团队记忆与个人记忆分开保存' },
+  { title: 'Dify 1.9 更新说明', site: 'dify.ai', finding: '工作流支持连接器节点' },
 ];
 const sampleAlerts = [
   { level: 'high', title: '华东二号供应商交付延期 5 天', owner: '采购 · 周宁' },
@@ -203,23 +204,43 @@ function sourceLabel(slot: WidgetSlot, state: BotosState): string | null {
   if (slot.source === 'core') return null;
   const [type, id] = slot.source.split(':');
   const name = type === 'skill' ? state.skills.find(s => s.id === id)?.name : state.mcps.find(m => m.id === id)?.name;
-  return name ? `${type === 'skill' ? 'Skill' : 'MCP'} · ${name}` : null;
+  return name ? `${type === 'skill' ? '技能' : '连接器'} · ${name}` : null;
 }
 
-export default function BotDashboard({ state, bot, recentlyDone = [], onSelectBot }: { state: BotosState; bot: Bot; recentlyDone?: string[]; onSelectBot: (id: string) => void }) {
+/** 沉淀：把用得顺的智能体变成专家（智能体群变成专家团），可以同时提交发布到企业市场。 */
+function MatureControl({ bot, onMature }: { bot: Bot; onMature: (publish: boolean) => void }) {
+  const [open, setOpen] = useState(false);
+  const [publish, setPublish] = useState(true);
+  const target = bot.kind === 'group' ? '专家团' : '专家';
+  if (bot.matured) return <span className="bos-matured"><BadgeCheck size={14} />{target}</span>;
+  return <div className="bos-mature">
+    <button type="button" className="bos-secondary" aria-expanded={open} onClick={() => setOpen(v => !v)}><Sprout size={14} />沉淀为{target}</button>
+    {open ? <div className="bos-mature-pop" role="dialog" aria-label={`沉淀为${target}`}>
+      <strong>沉淀为{target}</strong>
+      <p>「{bot.name}」会成为一个成熟的{target}：保留现有的角色、技能、连接器和团队记忆，出现在「专家」里，可以被复用。</p>
+      <label><input type="checkbox" checked={publish} onChange={e => setPublish(e.target.checked)} />同时提交发布到企业市场（需管理员审批）</label>
+      <div className="bos-form-actions"><button type="button" className="bos-primary" onClick={() => { onMature(publish); setOpen(false); }}>确认沉淀</button><button type="button" className="bos-secondary" onClick={() => setOpen(false)}>取消</button></div>
+    </div> : null}
+  </div>;
+}
+
+export default function BotDashboard({ state, bot, recentlyDone = [], faceState = 'idle', onSelectBot, onMature }: { state: BotosState; bot: Bot; recentlyDone?: string[]; faceState?: FaceState; onSelectBot: (id: string) => void; onMature?: (publish: boolean) => void }) {
   const spec = useMemo(() => composeDashboard(bot, state.skills, state.mcps), [bot, state.skills, state.mcps]);
   const ctx: Ctx = { state, bot, scope: scopeBots(state, bot), recentlyDone, onSelectBot };
   const working = ctx.scope.filter(b => pendingCount(state, b.id) > 0).length;
   const waiting = waitingItems(ctx).length;
   const summary = bot.kind === 'main'
-    ? `${waiting} 件事等你处理，${working} 个 Bot 正在工作。`
+    ? `${waiting} 件事等你处理，${working} 个智能体正在工作。`
     : spec.headline.subtitle;
-  return <section className="bos-dashboard" aria-label={`${bot.name} 仪表盘`}>
+  return <section className="bos-dashboard" aria-label={`${bot.name} 工作台`}>
     <header className="bos-dash-head">
+      {/* 非首页：面板左上角就是这个智能体的头像，充当页面 Logo */}
+      {bot.kind === 'main' ? null : <BotAvatar bot={bot} size={40} state={faceState} members={memberBots(state, bot)} />}
       <div>
         <h1>{spec.headline.title}{working ? <span className="bos-live"><i />工作中</span> : null}</h1>
         <p>{summary}</p>
       </div>
+      {isAgent(bot) && onMature ? <MatureControl key={bot.id} bot={bot} onMature={onMature} /> : null}
     </header>
     <div className="bos-dash-grid">
       {spec.widgets.map(slot => {

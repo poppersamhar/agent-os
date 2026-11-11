@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import UnifiedWorkspace from './components/agentos/UnifiedWorkspace';
 import BotWorkspace from './components/botos/BotWorkspace';
 import AvatarSheet from './components/botos/AvatarSheet';
+import AgentMarket from './components/botos/AgentMarket';
+import NavDraft from './components/botos/NavDraft';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 
@@ -269,5 +271,7 @@ export default function App() {
   if (view === 'legacy') return <LegacyApp />;
   if (view === 'v02') return <UnifiedWorkspace />;
   if (view === 'avatars') return <AvatarSheet />;
+  if (view === 'market') return <AgentMarket />;
+  if (view === 'nav-draft') return <NavDraft />;
   return <BotWorkspace />;
 }

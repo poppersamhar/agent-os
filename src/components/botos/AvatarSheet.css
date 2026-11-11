@@ -40,3 +40,9 @@
 
 .kdx-picker-demo { display: grid; gap: 10px; }
 .kdx-label { margin: 0; font-size: 12px; font-weight: 500; color: var(--u4f-text-muted); }
+
+.kdx-card--system { grid-column: 1 / -1; }
+.kdx-system-row { gap: 22px; }
+.kdx-system-row figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.kdx-system-row figcaption { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; }
+.kdx-system-row figcaption small { color: var(--u4f-text-muted); font-size: 10px; }

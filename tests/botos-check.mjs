@@ -76,13 +76,25 @@ assert.equal(restored.currentId, MAIN_BOT_ID);
 assert.equal(restored.order.length, state.order.length);
 assert.equal(typeof BOTOS_STORAGE_KEY, 'string');
 
-// 头像：主 Bot 固定「舵」；示例 Bot 头像各不相同
+// 头像：主 Bot 固定「圆 · 靛蓝」；示例 Bot 头像各不相同
 const { faceStateOf } = await import(new URL('../src/components/botos/botModel.ts', import.meta.url));
-assert.deepEqual(bot(MAIN_BOT_ID).face, { shape: 'helm', color: 'indigo' });
+assert.deepEqual(bot(MAIN_BOT_ID).face, { shape: 'hex', color: 'indigo' });
 const regular = state.bots.filter(b => b.kind === 'bot');
 assert.equal(new Set(regular.map(b => `${b.face.shape}:${b.face.color}`)).size, regular.length, 'seed bots should have distinct faces');
 assert.equal(new Set(regular.map(b => b.face.color)).size, regular.length, 'seed bots should have distinct colors');
-assert.ok(state.bots.every(b => b.kind === 'main' || b.face.shape !== 'helm'), 'helm shape is reserved for the main bot');
+const systemShapes = ['hex', 'crowd', 'spark', 'plug'];
+const isMain = f => systemShapes.includes(f.shape);
+assert.ok(state.bots.every(b => b.kind === 'main' || b.kind === 'system' || !isMain(b.face)), 'system shapes are reserved for system agents');
+const { pickFace } = await import(new URL('../src/components/botos/botFaces.ts', import.meta.url));
+for (const name of ['a', 'b', '调研', '数据', 'Bot 1', 'Bot 2', '合同审查']) assert.ok(!isMain(pickFace(name, [])), `auto face for ${name} must not use a system shape`);
+
+// 旧数据里主 Bot 的头像、以及普通 Bot 用了系统专用形状的，恢复时会改正
+const stale = JSON.parse(JSON.stringify(state));
+stale.bots.find(b => b.id === MAIN_BOT_ID).face = { shape: 'helm', color: 'indigo' };
+stale.bots.find(b => b.id === 'risk').face = { shape: 'hex', color: 'indigo' };
+const fixed = restoreBotos(JSON.stringify(stale), seedBotos);
+assert.deepEqual(fixed.bots.find(b => b.id === MAIN_BOT_ID).face, { shape: 'hex', color: 'indigo' });
+assert.ok(!isMain(fixed.bots.find(b => b.id === 'risk').face));
 
 // 旧数据没有头像：恢复时补上，且不和已有头像重复
 const legacy = JSON.parse(JSON.stringify(state));
@@ -99,5 +111,52 @@ assert.equal(faceStateOf(state, bot('research'), ['research']), 'done');
 assert.equal(faceStateOf(state, bot('risk')), 'needs');
 assert.equal(faceStateOf(state, bot('work')), 'idle');
 assert.equal(faceStateOf(state, bot(MAIN_BOT_ID)), 'needs', 'main bot needs you when any bot does');
+
+// 主 Bot 名称由系统固定：旧数据里的「助理」恢复时改为当前名称
+const { MAIN_BOT_NAME } = await import(new URL('../src/components/botos/botModel.ts', import.meta.url));
+assert.equal(bot(MAIN_BOT_ID).name, MAIN_BOT_NAME);
+const renamed = JSON.parse(JSON.stringify(state));
+const oldMain = renamed.bots.find(b => b.id === MAIN_BOT_ID);
+oldMain.name = '助理'; oldMain.messages.forEach(m => { if (m.author === 'bot') m.name = '助理'; });
+const restoredMain = restoreBotos(JSON.stringify(renamed), seedBotos).bots.find(b => b.id === MAIN_BOT_ID);
+assert.equal(restoredMain.name, MAIN_BOT_NAME);
+assert.ok(restoredMain.messages.filter(m => m.author === 'bot').every(m => m.name === MAIN_BOT_NAME));
+
+// 系统管理智能体：存在、不进智能体栏、不可删除；头像专用
+const { SYSTEM_AGENTS, isAgent, agentLabel } = await import(new URL('../src/components/botos/botModel.ts', import.meta.url));
+const { isReservedFace } = await import(new URL('../src/components/botos/botFaces.ts', import.meta.url));
+for (const sys of SYSTEM_AGENTS) {
+  const b = bot(sys.id);
+  assert.ok(b && b.kind === 'system' && b.role === sys.role, `${sys.id} seeded`);
+  assert.ok(!state.order.includes(sys.id), 'system agents stay out of the agent bar');
+  assert.equal(botosReducer(state, { type: 'delete-bot', id: sys.id }), state, 'system agents cannot be deleted');
+  assert.ok(b.messages[0].choices, 'system agents open with a question card');
+}
+assert.ok(state.bots.filter(isAgent).every(b => !isReservedFace(b.face)), 'agents never use reserved faces');
+const sysTalk = botosReducer(state, { type: 'send', botId: 'sys-skills', message: { id: 'u9', author: 'user', name: 'Samhar', text: 'hi', time: '10:00' }, task: { id: 't9', botId: 'sys-skills', request: 'hi' } });
+assert.deepEqual(sysTalk.order, state.order, 'talking to a system agent does not reorder the bar');
+
+// 旧数据没有系统智能体：恢复时补上
+const noSys = JSON.parse(JSON.stringify(state));
+noSys.bots = noSys.bots.filter(b => !b.id.startsWith('sys-'));
+const withSys = restoreBotos(JSON.stringify(noSys), seedBotos);
+assert.ok(SYSTEM_AGENTS.every(s => withSys.bots.some(b => b.id === s.id && b.kind === 'system')));
+
+// 沉淀：智能体 → 专家，智能体群 → 专家团；系统智能体不能沉淀
+assert.equal(agentLabel(bot('work')), '智能体');
+const matured = botosReducer(state, { type: 'mature', id: 'work' });
+assert.equal(agentLabel(matured.bots.find(b => b.id === 'work')), '专家');
+assert.equal(agentLabel({ kind: 'group', matured: false }), '智能体群');
+assert.equal(agentLabel({ kind: 'group', matured: true }), '专家团');
+assert.equal(botosReducer(state, { type: 'mature', id: 'sys-skills' }).bots.find(b => b.id === 'sys-skills').matured, undefined);
+
+// 管理智能体在对话中修改面板数据
+const { systemReply } = await import(new URL('../src/components/botos/systemAgents.ts', import.meta.url));
+const made = systemReply('skills', state, '新建一个「投诉分析」技能');
+assert.ok(made.state.skills.some(s => s.name === '投诉分析'), 'skills agent creates a skill');
+assert.equal(systemReply('skills', state, '新建一个技能').state, undefined, 'asks for a name when missing');
+const mcp = systemReply('connectors', state, '接入『工单系统』，地址 mcp://ticket.internal');
+assert.equal(mcp.state.mcps.find(m => m.name === '工单系统').endpoint, 'mcp://ticket.internal');
+assert.ok(systemReply('experts', state, '新建一个智能体').openCreate);
 
 console.log('botos checks passed');

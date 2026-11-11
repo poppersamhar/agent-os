@@ -1,8 +1,8 @@
-// AgentOS v0.3 · Bot 化工作空间的数据模型。
-// Bot 是唯一的基本单元：对话、记忆、已装能力与仪表盘都属于 Bot。
-// Skill / MCP 是账号级共享能力；仪表盘由 Bot 的 prompt + 已装能力组装为声明式 Spec。
+// AgentOS v0.3 · 专家化工作空间的数据模型。
+// 专家是唯一的基本单元：对话、记忆、已装能力与工作台都属于专家。
+// 技能 / 连接器是账号级共享能力；工作台由专家的 prompt + 已装能力组装为声明式 Spec。
 
-import { MAIN_FACE, faceShapes, pickFace, type FaceSpec, type FaceState } from './botFaces';
+import { MAIN_FACE, RESERVED_FACES, SYSTEM_FACES, faceShapes, isReservedFace, pickFace, type FaceSpec, type FaceState } from './botFaces';
 
 export type WidgetKind =
   | 'waiting' | 'agents' | 'done' | 'runs' | 'artifacts' | 'members'
@@ -29,23 +29,34 @@ export interface Mcp {
 }
 
 export type MessageAuthor = 'user' | 'bot' | 'source' | 'member';
+/** 消息里附带的选择卡：专家主动问用户下一步做什么。 */
+export interface BotChoices { question: string; options: string[]; answered?: string }
 export interface BotMessage {
   id: string; author: MessageAuthor; name: string; text: string; time: string;
   attachment?: string;
+  choices?: BotChoices;
 }
 
 export interface MemoryItem { id: string; text: string; scope: 'team' | 'personal'; createdAt: string }
 
-export type BotKind = 'main' | 'bot' | 'group';
+/** main：企业效能管理智能体（入口叫「首页」）；system：专家 / 技能 / 连接器三个系统智能体；bot / group：用户的智能体与智能体群。 */
+export type BotKind = 'main' | 'bot' | 'group' | 'system';
+export type SystemRole = 'experts' | 'skills' | 'connectors';
 export interface Bot {
   id: string; name: string; kind: BotKind; prompt: string; model: string;
-  /** 头像：形状 × 颜色。主 Bot 固定为「舵」。 */
+  /** 头像：形状 × 颜色。系统智能体用专用形状。 */
   face: FaceSpec;
   skillIds: string[]; mcpIds: string[]; memberIds: string[];
   memory: MemoryItem[]; messages: BotMessage[];
   /** 最近 56 天的每日运行数：[自动完成, 需要你介入] */
   history: [number, number][];
   createdAt: string;
+  /** 从 Agent Market 添加时，记录来源条目 id（如 expert:research）。 */
+  sourceId?: string;
+  /** 已沉淀为专家（bot）或专家团（group）：成熟、可复用、可发布到市场。 */
+  matured?: boolean;
+  /** 系统智能体负责的管理面板。 */
+  role?: SystemRole;
 }
 
 export interface PendingTask { id: string; botId: string; request: string }
@@ -53,7 +64,7 @@ export interface PendingTask { id: string; botId: string; request: string }
 export interface BotosState {
   version: 1;
   bots: Bot[];
-  /** Bot 栏顺序（不含主 Bot）。发送后当前 Bot 移到第一位。 */
+  /** 专家栏顺序（不含企业效能管理智能体）。发送后当前专家移到第一位。 */
   order: string[];
   currentId: string;
   skills: Skill[];
@@ -62,9 +73,28 @@ export interface BotosState {
 }
 
 export const MAIN_BOT_ID = 'main';
+
+/** 用户的智能体（不含首页和系统管理智能体）。 */
+export const isAgent = (bot: Pick<Bot, 'kind'>) => bot.kind === 'bot' || bot.kind === 'group';
+/** 对外称呼：未沉淀叫「智能体 / 智能体群」，沉淀后叫「专家 / 专家团」。 */
+export function agentLabel(bot: Pick<Bot, 'kind' | 'matured'>): string {
+  if (bot.kind === 'main' || bot.kind === 'system') return '系统智能体';
+  if (bot.kind === 'group') return bot.matured ? '专家团' : '智能体群';
+  return bot.matured ? '专家' : '智能体';
+}
+
+/** 三个系统管理智能体：专用头像，用户不能删除。 */
+export const SYSTEM_AGENTS: { id: string; role: SystemRole; name: string; face: FaceSpec; prompt: string }[] = [
+  { id: 'sys-experts', role: 'experts', name: '专家', face: SYSTEM_FACES.experts, prompt: '帮你找到、创建和管理智能体、专家与专家团。' },
+  { id: 'sys-skills', role: 'skills', name: '技能', face: SYSTEM_FACES.skills, prompt: '帮你创建、修改和管理技能。' },
+  { id: 'sys-connectors', role: 'connectors', name: '连接器', face: SYSTEM_FACES.connectors, prompt: '帮你接入企业系统，管理连接器与凭证。' },
+];
+export const systemAgentId = (role: SystemRole) => SYSTEM_AGENTS.find(s => s.role === role)!.id;
+/** 主 Bot 的对外名称，由系统固定，用户不能改。 */
+export const MAIN_BOT_NAME = '企业效能管理智能体';
 export const HISTORY_DAYS = 56;
 
-// ───────────────────────── 仪表盘组装 ─────────────────────────
+// ───────────────────────── 工作台组装 ─────────────────────────
 
 const core = (kind: WidgetKind, title: string, span: 1 | 2 | 3): WidgetSlot => ({ id: `core:${kind}`, kind, title, source: 'core', span });
 
@@ -73,12 +103,12 @@ function firstSentence(prompt: string): string {
   return sentence.length > 38 ? `${sentence.slice(0, 38)}…` : sentence;
 }
 
-/** 根据 Bot 的 prompt 与已装 Skill / MCP 组装仪表盘 Spec。纯函数，可测试。 */
+/** 根据专家的 prompt 与已装技能 / 连接器组装工作台 Spec。纯函数，可测试。 */
 export function composeDashboard(bot: Bot, skills: Skill[], mcps: Mcp[]): DashboardSpec {
   if (bot.kind === 'main') {
     return {
-      headline: { title: '你好，Samhar', subtitle: '主 Bot · 汇总全部 Bot 的进展、待处理事项与运行记录' },
-      widgets: [core('waiting', '待你处理', 1), core('agents', '你的 Bot', 1), core('done', '完成情况', 1), core('runs', '运行记录', 3)],
+      headline: { title: '你好，Samhar', subtitle: '企业效能管理智能体 · 汇总全部智能体的进展、待处理事项与运行记录' },
+      widgets: [core('waiting', '待你处理', 1), core('agents', '你的智能体', 1), core('done', '完成情况', 1), core('runs', '运行记录', 3)],
     };
   }
   const installedSkills = bot.skillIds.map(id => skills.find(s => s.id === id)).filter((s): s is Skill => !!s);
@@ -90,17 +120,17 @@ export function composeDashboard(bot: Bot, skills: Skill[], mcps: Mcp[]): Dashbo
     seen.add(w.kind);
     contributed.push({ id: `${source}:${w.kind}`, kind: w.kind, title: w.title, source, span: w.span });
   };
-  // prompt 提到的能力优先：名称出现在 prompt 中的 Skill / MCP 排在前面。
+  // prompt 提到的能力优先：名称出现在 prompt 中的技能 / 连接器排在前面。
   const mentioned = <T extends { name: string }>(items: T[]) => [...items].sort((a, b) => Number(bot.prompt.includes(b.name)) - Number(bot.prompt.includes(a.name)));
   mentioned(installedSkills).forEach(s => s.widgets.forEach(w => offer(`skill:${s.id}`, w)));
   mentioned(installedMcps).forEach(m => m.widgets.forEach(w => offer(`mcp:${m.id}`, w)));
 
   const widgets: WidgetSlot[] = [core('waiting', '待你处理', 1)];
-  if (bot.kind === 'group') widgets.push(core('members', '群聊成员', 2));
+  if (bot.kind === 'group') widgets.push(core('members', '成员', 2));
   widgets.push(...contributed);
   widgets.push(core('runs', '运行记录', 2), core('artifacts', '最近成果', 1));
 
-  const capability = `${installedSkills.length} 个 Skill · ${installedMcps.length} 个 MCP`;
+  const capability = `${installedSkills.length} 个技能 · ${installedMcps.length} 个连接器`;
   const role = firstSentence(bot.prompt);
   return {
     headline: { title: bot.name, subtitle: [role, capability].filter(Boolean).join(' ｜ ') },
@@ -128,7 +158,7 @@ function fillRows(widgets: WidgetSlot[]): WidgetSlot[] {
 export const nowTime = () => new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 export const uid = () => (globalThis.crypto?.randomUUID?.() ?? `id-${Math.random().toString(36).slice(2)}`);
 
-/** 确定性的伪随机，用于为 Bot 生成稳定的演示数据。 */
+/** 确定性的伪随机，用于为专家生成稳定的演示数据。 */
 export function seeded(seed: string) {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -162,23 +192,26 @@ export const waitingFor = (botId: string): WaitingItem[] => (demoWaiting[botId] 
 
 export const memberBots = (state: BotosState, bot: Bot): Bot[] => state.bots.filter(b => bot.memberIds.includes(b.id));
 
-/** 头像状态：工作中 > 刚完成 > 需要你 > 空闲。主 Bot 与群聊汇总下属 Bot 的「需要你」。 */
+/** 头像状态：工作中 > 刚完成 > 需要你 > 空闲。企业效能管理智能体与群聊汇总下属专家的「需要你」。 */
 export function faceStateOf(state: BotosState, bot: Bot, recentlyDone: string[] = []): FaceState {
   if (pendingCount(state, bot.id) > 0) return 'working';
   if (recentlyDone.includes(bot.id)) return 'done';
-  const scope = bot.kind === 'main' ? state.bots : bot.kind === 'group' ? [bot, ...memberBots(state, bot)] : [bot];
+  const scope = bot.kind === 'main' ? state.bots.filter(isAgent) : bot.kind === 'system' ? [] : bot.kind === 'group' ? [bot, ...memberBots(state, bot)] : [bot];
   return scope.some(b => waitingFor(b.id).length) ? 'needs' : 'idle';
 }
 
 const validFace = (face: unknown): face is FaceSpec => !!face && typeof face === 'object'
   && (face as FaceSpec).shape in faceShapes && ['indigo', 'cinnabar', 'taupe', 'black'].includes((face as FaceSpec).color);
 
-/** 给缺少头像的 Bot 补上：主 Bot 用「舵」，其余按名称自动分配、避开已用组合。 */
+/** 给缺少头像的专家补上：企业效能管理智能体用「圆 · 靛蓝」，其余按名称自动分配、避开已用组合。普通专家不能用企业效能管理智能体的组合。 */
 export function assignFaces<T extends Omit<Bot, 'face'> & { face?: unknown }>(bots: T[]): Bot[] {
-  const taken: FaceSpec[] = [MAIN_FACE, ...bots.filter(b => b.kind !== 'main' && validFace(b.face)).map(b => b.face as FaceSpec)];
+  const usable = (face: unknown): face is FaceSpec => validFace(face) && !isReservedFace(face);
+  const taken: FaceSpec[] = [...RESERVED_FACES, ...bots.filter(b => isAgent(b) && usable(b.face)).map(b => b.face as FaceSpec)];
   return bots.map(bot => {
-    if (bot.kind === 'main') return { ...bot, face: MAIN_FACE };
-    if (validFace(bot.face)) return bot as Bot;
+    if (bot.kind === 'main') return { ...bot, face: MAIN_FACE, name: MAIN_BOT_NAME, messages: bot.messages.map(m => m.author === 'bot' ? { ...m, name: MAIN_BOT_NAME } : m) };
+    const sys = SYSTEM_AGENTS.find(s => s.id === bot.id);
+    if (sys) return { ...bot, kind: 'system', role: sys.role, face: sys.face, name: sys.name };
+    if (usable(bot.face)) return bot as Bot;
     const face = pickFace(bot.name, taken);
     taken.push(face);
     return { ...bot, face };
@@ -196,13 +229,16 @@ export type BotosAction =
   | { type: 'update-bot'; id: string; patch: Partial<Pick<Bot, 'name' | 'prompt' | 'model' | 'skillIds' | 'mcpIds' | 'memberIds' | 'face'>> }
   | { type: 'delete-bot'; id: string }
   | { type: 'forget'; botId: string; memoryId: string }
+  | { type: 'mature'; id: string }
+  | { type: 'answer'; botId: string; messageId: string; answer: string }
   | { type: 'create-skill'; skill: Skill }
   | { type: 'create-mcp'; mcp: Mcp }
   | { type: 'toggle-mcp'; id: string }
   | { type: 'reset'; state: BotosState };
 
 const mapBot = (state: BotosState, id: string, fn: (bot: Bot) => Bot): Bot[] => state.bots.map(bot => bot.id === id ? fn(bot) : bot);
-const toFront = (order: string[], id: string) => id === MAIN_BOT_ID ? order : [id, ...order.filter(item => item !== id)];
+/** 智能体栏顺序：只有用户的智能体会排到第一位；首页与系统管理智能体不进智能体栏。 */
+const toFront = (state: BotosState, id: string) => state.bots.some(bot => bot.id === id && isAgent(bot)) ? [id, ...state.order.filter(item => item !== id)] : state.order;
 
 export function botosReducer(state: BotosState, action: BotosAction): BotosState {
   switch (action.type) {
@@ -212,7 +248,7 @@ export function botosReducer(state: BotosState, action: BotosAction): BotosState
       return {
         ...state,
         currentId: action.botId,
-        order: toFront(state.order, action.botId),
+        order: toFront(state, action.botId),
         bots: mapBot(state, action.botId, bot => ({ ...bot, messages: [...bot.messages, action.message] })),
         pending: [...state.pending, action.task],
       };
@@ -240,14 +276,18 @@ export function botosReducer(state: BotosState, action: BotosAction): BotosState
       return { ...state, bots: [...state.bots, action.bot], order: [action.bot.id, ...state.order], currentId: action.bot.id };
     case 'update-bot':
       return { ...state, bots: mapBot(state, action.id, bot => ({ ...bot, ...action.patch })) };
+    case 'mature':
+      return { ...state, bots: mapBot(state, action.id, bot => isAgent(bot) ? { ...bot, matured: true } : bot) };
     case 'delete-bot': {
-      if (action.id === MAIN_BOT_ID) return state;
+      if (!state.bots.some(bot => bot.id === action.id && isAgent(bot))) return state;
       const bots = state.bots
         .filter(bot => bot.id !== action.id)
         .map(bot => bot.memberIds.includes(action.id) ? { ...bot, memberIds: bot.memberIds.filter(id => id !== action.id) } : bot);
       const order = state.order.filter(id => id !== action.id);
       return { ...state, bots, order, pending: state.pending.filter(task => task.botId !== action.id), currentId: state.currentId === action.id ? (order[0] ?? MAIN_BOT_ID) : state.currentId };
     }
+    case 'answer':
+      return { ...state, bots: mapBot(state, action.botId, bot => ({ ...bot, messages: bot.messages.map(m => m.id === action.messageId && m.choices ? { ...m, choices: { ...m.choices, answered: action.answer } } : m) })) };
     case 'forget':
       return { ...state, bots: mapBot(state, action.botId, bot => ({ ...bot, memory: bot.memory.filter(item => item.id !== action.memoryId) })) };
     case 'create-skill':
@@ -270,11 +310,18 @@ export function restoreBotos(raw: string | null, fallback: () => BotosState): Bo
   try {
     const value = JSON.parse(raw) as Partial<BotosState>;
     if (value?.version !== 1 || !Array.isArray(value.bots) || !Array.isArray(value.order) || !Array.isArray(value.skills) || !Array.isArray(value.mcps)) return fallback();
-    const bots = assignFaces(value.bots.filter((bot): bot is Bot => !!bot && typeof bot.id === 'string' && Array.isArray(bot.messages) && Array.isArray(bot.history)));
-    if (!bots.some(bot => bot.id === MAIN_BOT_ID)) return fallback();
+    const restored = value.bots.filter((bot): bot is Bot => !!bot && typeof bot.id === 'string' && Array.isArray(bot.messages) && Array.isArray(bot.history));
+    if (!restored.some(bot => bot.id === MAIN_BOT_ID)) return fallback();
+    // 旧数据没有系统管理智能体：从示例里补上
+    const seeded = fallback().bots;
+    SYSTEM_AGENTS.forEach(sys => { if (!restored.some(b => b.id === sys.id)) { const b = seeded.find(x => x.id === sys.id); if (b) restored.push(b); } });
+    // 旧数据没有沉淀标记：从市场添加的（有来源）和示例里已沉淀的，视为专家 / 专家团
+    restored.forEach((b, i) => { if (b.matured === undefined && (b.sourceId || seeded.find(x => x.id === b.id)?.matured)) restored[i] = { ...b, matured: true }; });
+    const bots = assignFaces(restored);
     const ids = new Set(bots.map(bot => bot.id));
-    const order = value.order.filter(id => ids.has(id) && id !== MAIN_BOT_ID);
-    bots.forEach(bot => { if (bot.id !== MAIN_BOT_ID && !order.includes(bot.id)) order.push(bot.id); });
+    const agentIds = new Set(bots.filter(isAgent).map(bot => bot.id));
+    const order = value.order.filter(id => agentIds.has(id));
+    bots.forEach(bot => { if (agentIds.has(bot.id) && !order.includes(bot.id)) order.push(bot.id); });
     const pending = Array.isArray(value.pending) ? value.pending.filter(task => ids.has(task?.botId)) : [];
     return {
       version: 1, bots, order, pending,

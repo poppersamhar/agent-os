@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ImagePlus } from 'lucide-react';
 import BotFace from './BotFace';
-import { faceColors, faceName, pickableShapes, recommendFaces, sameFace, type FaceSpec, type FaceState } from './botFaces';
+import { faceColors, faceName, isReservedFace, pickableShapes, recommendFaces, sameFace, type FaceSpec, type FaceState } from './botFaces';
 import './FacePicker.css';
 
 const previewStates: { id: FaceState; name: string }[] = [
@@ -22,13 +22,15 @@ export default function FacePicker({ value, onChange, prompt, auto = false, comp
     </div>
     {tab === 'pick' ? <>
       <p className="kdx-label">形状</p>
-      <div className="kdx-picker-row">{pickableShapes.map(shape => <button key={shape.id} type="button" aria-pressed={value.shape === shape.id} aria-label={shape.name} title={shape.name}
+      <div className="kdx-picker-row">{pickableShapes.map(shape => <button key={shape.id} type="button" aria-pressed={value.shape === shape.id} aria-label={shape.name}
+        disabled={isReservedFace({ shape: shape.id, color: value.color })} title={isReservedFace({ shape: shape.id, color: value.color }) ? '这个组合留给系统智能体' : shape.name}
         onClick={() => onChange({ ...value, shape: shape.id })}><BotFace face={{ shape: shape.id, color: value.color }} size={30} /></button>)}</div>
       <p className="kdx-label">颜色</p>
-      <div className="kdx-picker-row">{faceColors.map(color => <button key={color.id} type="button" className="kdx-swatch" aria-pressed={value.color === color.id} aria-label={color.name} title={color.name}
+      <div className="kdx-picker-row">{faceColors.map(color => <button key={color.id} type="button" className="kdx-swatch" aria-pressed={value.color === color.id} aria-label={color.name}
+        disabled={isReservedFace({ shape: value.shape, color: color.id })} title={isReservedFace({ shape: value.shape, color: color.id }) ? '这个组合留给系统智能体' : color.name}
         onClick={() => onChange({ ...value, color: color.id })}><i style={{ background: color.fill }} /></button>)}</div>
     </> : tab === 'gen' ? <>
-      <p className="kdx-label">按 Bot 的角色与目标推荐</p>
+      <p className="kdx-label">按智能体的角色与目标推荐</p>
       <div className="kdx-picker-row">{recs.map(rec => <button key={`${rec.shape}-${rec.color}`} type="button" className="kdx-rec" aria-pressed={sameFace(rec, value)} onClick={() => onChange(rec)}>
         <BotFace face={rec} size={40} /><small>{faceName(rec)}</small></button>)}</div>
       <p className="kdx-note">原型先按关键词推荐，之后可以接模型生成。</p>

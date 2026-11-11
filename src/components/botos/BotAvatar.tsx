@@ -2,7 +2,11 @@ import BotFace, { BotFaceStack } from './BotFace';
 import type { FaceState } from './botFaces';
 import type { Bot } from './botModel';
 
-/** 产品里统一的 Bot 头像入口。群聊有 2 个以上成员时叠放成员头像，否则用自己的头像。 */
+/**
+ * 产品里统一的智能体头像入口。
+ * - 智能体群 / 专家团：成员头像叠放。
+ * - 企业效能管理智能体与系统管理智能体：用专用形状（六边、团队、星芒、插头），不加角标。
+ */
 export default function BotAvatar({ bot, size = 28, state = 'idle', members = [], title }: {
   bot: Pick<Bot, 'kind' | 'face'>; size?: number; state?: FaceState; members?: Pick<Bot, 'face'>[]; title?: string;
 }) {

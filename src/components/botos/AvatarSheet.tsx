@@ -2,7 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { ArrowLeft, ImagePlus } from 'lucide-react';
 import FacePicker from './FacePicker';
 import BotFace, { BotFaceStack } from './BotFace';
-import { MAIN_FACE, faceColors, faceName, faceShapes, pickableShapes, type FaceSpec, type FaceState } from './botFaces';
+import { MAIN_FACE, SYSTEM_FACES, faceColors, faceName, faceShapes, pickableShapes, type FaceSpec, type FaceState } from './botFaces';
 import { seedBotos } from './botosSeed';
 import './BotWorkspace.css';
 import './AvatarSheet.css';
@@ -17,10 +17,10 @@ const states: { id: FaceState; name: string; note: string }[] = [
 ];
 
 const sizes = [
-  { size: 20, use: 'Bot 栏' }, { size: 22, use: '对话标题' }, { size: 28, use: '列表' }, { size: 42, use: '仪表盘' }, { size: 64, use: '选择面板' },
+  { size: 20, use: '智能体栏' }, { size: 22, use: '对话标题' }, { size: 28, use: '列表' }, { size: 42, use: '工作台' }, { size: 64, use: '选择面板' },
 ];
 
-// 示例 Bot 的头像：由产品里的同一套规则按名称自动分配（主 Bot 固定用「舵」）。
+// 示例智能体的头像：由产品里的同一套规则按名称自动分配（系统智能体用专用形状）。
 const autoFaces = seedBotos().bots.filter(bot => bot.kind === 'bot').map(bot => ({ id: bot.id, name: bot.name, face: bot.face }));
 const faceOf = (id: string) => autoFaces.find(item => item.id === id)?.face ?? MAIN_FACE;
 
@@ -42,7 +42,7 @@ function PickerDemo() {
   const [face, setFace] = useState<FaceSpec>({ shape: 'leaf', color: 'indigo' });
   const [prompt, setPrompt] = useState('持续跟踪竞品动态，用网页调研整理产品更新与定价');
   return <div className="kdx-picker-demo">
-    <label className="kdx-label" htmlFor={promptId}>Bot 的角色（「生成」页签据此推荐）</label>
+    <label className="kdx-label" htmlFor={promptId}>智能体的角色（「生成」页签据此推荐）</label>
     <textarea id={promptId} className="kdx-textarea" rows={2} value={prompt} onChange={e => setPrompt(e.target.value)} />
     <FacePicker value={face} onChange={setFace} prompt={prompt} />
   </div>;
@@ -52,8 +52,8 @@ export default function AvatarSheet() {
   return <div className="kdx-sheet kdx-theme" data-theme="light">
     <header className="kdx-sheet-head">
       <a className="kdx-back" href="./"><ArrowLeft size={14} />返回工作空间</a>
-      <h1>Bot 头像样稿</h1>
-      <p>形状 × 颜色 × 两点眼睛。{pickableShapes.length} 种形状 × {faceColors.length} 种颜色 = {pickableShapes.length * faceColors.length} 种组合，另有一个「舵」形留给主 Bot。
+      <h1>智能体头像样稿</h1>
+      <p>形状 × 颜色 × 两点眼睛。{pickableShapes.length} 种形状 × {faceColors.length} 种颜色 = {pickableShapes.length * faceColors.length} 种组合，另有四种形状专门留给系统智能体。
         颜色只用 KodaX 主题自己的靛蓝、朱砂、暖灰，再加纯黑。遵循 KodaX：圆头线条、圆点为基本单元、低饱和、无渐变。每组都并排给出亮色与深色两个主题。</p>
     </header>
 
@@ -80,38 +80,41 @@ export default function AvatarSheet() {
       <Pair>{() => <div className="kdx-sizes">{sizes.map(item => <div key={item.size} className="kdx-cell"><BotFace face={faceOf('research')} size={item.size} state={item.size === 20 ? 'needs' : 'idle'} /><small>{item.size}px<br />{item.use}</small></div>)}</div>}</Pair>
     </Section>
 
-    <Section title="6 · 主 Bot、群聊与上传">
+    <Section title="6 · 系统智能体、专家团与上传">
       <Pair>{() => <div className="kdx-specials">
-        <div className="kdx-card"><strong>主 Bot</strong><div className="kdx-row">{states.map(s => <BotFace key={s.id} face={MAIN_FACE} size={42} state={s.id} loop />)}</div><small>专属「舵」形（外圈 + 圆），颜色为靛蓝；舵形用户不能选。</small></div>
-        <div className="kdx-card"><strong>群聊</strong><div className="kdx-row"><BotFaceStack faces={[faceOf('research'), faceOf('work')]} size={42} /><BotFaceStack faces={[faceOf('research'), faceOf('work'), faceOf('risk')]} size={42} /><BotFaceStack faces={[faceOf('data'), faceOf('risk')]} size={28} /></div><small>2–3 个成员头像叠放，替代通用的「多人」图标。</small></div>
+        <div className="kdx-card kdx-card--system"><strong>系统智能体</strong><div className="kdx-row kdx-system-row">
+          {[{ face: MAIN_FACE, name: '首页', note: '六边，呼应 Logo' }, { face: SYSTEM_FACES.experts, name: '专家', note: '三个脑袋，一个团队' }, { face: SYSTEM_FACES.skills, name: '技能', note: '星芒，一闪的灵感' }, { face: SYSTEM_FACES.connectors, name: '连接器', note: '插头，接入系统' }]
+            .map(item => <figure key={item.name}><BotFace face={item.face} size={48} loop /><figcaption>{item.name}<small>{item.note}</small></figcaption></figure>)}
+        </div><small>四种形状只给系统智能体用，用户新建时选不到；靠形状本身区分，不加角标。</small></div>
+        <div className="kdx-card"><strong>专家团</strong><div className="kdx-row"><BotFaceStack faces={[faceOf('research'), faceOf('work')]} size={42} /><BotFaceStack faces={[faceOf('research'), faceOf('work'), faceOf('risk')]} size={42} /><BotFaceStack faces={[faceOf('data'), faceOf('risk')]} size={28} /></div><small>2–3 个成员头像叠放，替代通用的「多人」图标。</small></div>
         <div className="kdx-card"><strong>上传图片</strong><div className="kdx-row"><span className="kdx-photo"><ImagePlus size={18} /></span><span className="kdx-photo is-needs"><ImagePlus size={18} /></span></div><small>图片上无法画眼睛，状态改用右上角朱砂点。</small></div>
       </div>}</Pair>
     </Section>
 
-    <Section title="7 · 自动分配" note="新建 Bot 时按名称挑一个未被占用的组合，用户不选也不会撞。以下是现有示例 Bot 的分配结果。">
+    <Section title="7 · 自动分配" note="新建智能体时按名称挑一个未被占用的组合，用户不选也不会撞。以下是现有示例智能体的分配结果。">
       <Pair>{() => <div className="kdx-grid">{autoFaces.map(item => <div key={item.id} className="kdx-cell"><BotFace face={item.face} size={52} /><small>{item.name}<br />{faceName(item.face)}</small></div>)}</div>}</Pair>
     </Section>
 
-    <Section title="8 · 放进产品" note="Bot 栏胶囊加 22px 头像；工作中由眼睛表示，数字角标保留。">
+    <Section title="8 · 放进产品" note="智能体栏胶囊加 22px 头像；工作中由眼睛表示，数字角标保留。">
       <Pair>{() => <div className="kdx-mock">
         <div className="kdx-mock-bar">
-          <span className="bos-current"><BotFace face={faceOf('work')} size={22} />work</span>
+          <span className="bos-current"><BotFace face={faceOf('work')} size={22} />日常办公</span>
           <span className="bos-botbar-divider" />
-          <span className="bos-bot-pill"><BotFace face={faceOf('risk')} size={22} state="working" title="正在：核对华东二号供应商交付节点" />风险跟进工作台<span className="bos-badge">1</span></span>
-          <span className="bos-bot-pill"><BotFace face={faceOf('data')} size={22} state="needs" />数据质量巡检</span>
+          <span className="bos-bot-pill"><BotFace face={faceOf('risk')} size={22} state="working" title="正在：核对华东二号供应商交付节点" />风险跟进专家<span className="bos-badge">1</span></span>
+          <span className="bos-bot-pill"><BotFace face={faceOf('data')} size={22} state="needs" />数据巡检专家</span>
           <span className="bos-bot-pill"><BotFaceStack faces={[faceOf('research'), faceOf('work')]} size={22} />品牌专家团</span>
         </div>
-        <div className="kdx-mock-card"><strong>你的 Bot</strong><div className="kdx-mock-agents">
+        <div className="kdx-mock-card"><strong>你的智能体</strong><div className="kdx-mock-agents">
           {autoFaces.map((item, i) => <div key={item.id} className="kdx-cell"><BotFace face={item.face} size={42} state={i === 1 ? 'working' : i === 2 ? 'needs' : 'idle'} /><small>{item.name}</small></div>)}
           <div className="kdx-cell"><BotFaceStack faces={[faceOf('research'), faceOf('work')]} size={42} /><small>品牌专家团</small></div>
         </div></div>
       </div>}</Pair>
     </Section>
 
-    <Section title="9 · 选择面板" note="放在新建 / 编辑 Bot 的名称旁边。三个页签：形象、生成、上传；上方实时预览四种状态。可以直接点着试。">
+    <Section title="9 · 选择面板" note="放在新建智能体的名称上方。三个页签：形象、生成、上传；上方实时预览四种状态。可以直接点着试。">
       <Pair>{() => <PickerDemo />}</Pair>
     </Section>
 
-    <p className="kdx-foot">共 {Object.keys(faceShapes).length} 种形状定义（含主 Bot 专属 1 种）。样稿代码：<code>src/components/botos/BotFace.tsx</code>、<code>botFaces.ts</code>。</p>
+    <p className="kdx-foot">共 {Object.keys(faceShapes).length} 种形状。样稿代码：<code>src/components/botos/BotFace.tsx</code>、<code>botFaces.ts</code>。</p>
   </div>;
 }

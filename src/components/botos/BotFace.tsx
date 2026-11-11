@@ -4,7 +4,7 @@ import './BotFace.css';
 
 interface Props { face: FaceSpec; size?: number; state?: FaceState; title?: string; /** 「刚完成」的蹦跳循环播放（样稿和预览用）；产品里只蹦一次 */ loop?: boolean }
 
-/** Bot 头像。眼睛表达状态：空闲眨眼、工作中左右看、需要你看向你并亮朱砂舵点、完成后眯眼。 */
+/** 专家头像。眼睛表达状态：空闲眨眼、工作中左右看、需要你看向你并亮朱砂舵点、完成后眯眼。 */
 export default function BotFace({ face, size = 42, state = 'idle', title, loop = false }: Props) {
   const shape = faceShapes[face.shape];
   const small = size <= 24;
