@@ -1,8 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { composeDashboard, type Bot, type BotosState } from './botModel';
-import { draftToBot, models, type BotDraft } from './botDraft';
+import { draftFace, draftToBot, models, type BotDraft } from './botDraft';
 import { botTemplates } from './botosSeed';
-
+import BotAvatar from './BotAvatar';
+import FacePicker from './FacePicker';
 
 const toggle = (list: string[], id: string) => list.includes(id) ? list.filter(x => x !== id) : [...list, id];
 
@@ -20,6 +22,10 @@ export function SpecPreview({ bot, state }: { bot: Bot; state: BotosState }) {
 export default function BotEditor({ draft, onChange, state, editingId, showTemplates = false }: { draft: BotDraft; onChange: (draft: BotDraft) => void; state: BotosState; editingId?: string; showTemplates?: boolean }) {
   const set = (patch: Partial<BotDraft>) => onChange({ ...draft, ...patch });
   const candidates = state.bots.filter(b => b.kind === 'bot' && b.id !== editingId);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const face = draftFace(draft, state, editingId);
+  const members = state.bots.filter(b => draft.memberIds.includes(b.id));
+  const isStack = draft.kind === 'group' && members.length >= 2;
   return <div className="bos-editor">
     <div className="bos-editor-form">
       {showTemplates ? <div className="bos-field"><span>从模板开始</span><div className="bos-chips">
@@ -29,7 +35,18 @@ export default function BotEditor({ draft, onChange, state, editingId, showTempl
         <button type="button" aria-pressed={draft.kind === 'bot'} onClick={() => set({ kind: 'bot' })}>Bot</button>
         <button type="button" aria-pressed={draft.kind === 'group'} onClick={() => set({ kind: 'group' })}>群聊（专家团）</button>
       </div></div> : null}
-      <label className="bos-field"><span>名称</span><input value={draft.name} onChange={e => set({ name: e.target.value })} placeholder={draft.kind === 'group' ? '例如：品牌专家团' : '例如：竞品调研'} /></label>
+      <div className="bos-field"><span>头像与名称</span>
+        <div className="bos-name-row">
+          <button type="button" className="bos-face-button" aria-expanded={pickerOpen} disabled={isStack} aria-label="选择头像"
+            title={isStack ? '群聊头像由成员头像叠放组成' : '选择头像'} onClick={() => setPickerOpen(v => !v)}>
+            <BotAvatar bot={{ kind: draft.kind, face }} members={members} size={40} />
+            {isStack ? null : <ChevronDown size={12} />}
+          </button>
+          <input value={draft.name} onChange={e => set({ name: e.target.value })} aria-label="名称" placeholder={draft.kind === 'group' ? '例如：品牌专家团' : '例如：竞品调研'} />
+        </div>
+        {isStack ? <small className="bos-hint">群聊头像由成员头像叠放组成。</small> : null}
+        {pickerOpen && !isStack ? <FacePicker compact value={face} auto={!draft.face} prompt={`${draft.name} ${draft.prompt}`} onChange={next => set({ face: next })} /> : null}
+      </div>
       <label className="bos-field"><span>角色与目标（prompt）</span><textarea rows={3} value={draft.prompt} onChange={e => set({ prompt: e.target.value })} placeholder="这个 Bot 负责什么、怎样算做好" /></label>
       <label className="bos-field"><span>模型</span><select value={draft.model} onChange={e => set({ model: e.target.value })}>{models.map(m => <option key={m}>{m}</option>)}</select></label>
       {draft.kind === 'group' ? <div className="bos-field"><span>群聊成员</span><div className="bos-chips">
@@ -44,7 +61,7 @@ export default function BotEditor({ draft, onChange, state, editingId, showTempl
     </div>
     <div className="bos-editor-preview">
       <span className="bos-field-label">将生成的仪表盘</span>
-      <SpecPreview bot={draftToBot(draft, editingId)} state={state} />
+      <SpecPreview bot={draftToBot(draft, face, editingId)} state={state} />
       <p className="bos-hint">仪表盘由 prompt 和已装的 Skill / MCP 组装而成。增减能力，仪表盘随之变化。</p>
     </div>
   </div>;

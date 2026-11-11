@@ -76,4 +76,28 @@ assert.equal(restored.currentId, MAIN_BOT_ID);
 assert.equal(restored.order.length, state.order.length);
 assert.equal(typeof BOTOS_STORAGE_KEY, 'string');
 
+// 头像：主 Bot 固定「舵」；示例 Bot 头像各不相同
+const { faceStateOf } = await import(new URL('../src/components/botos/botModel.ts', import.meta.url));
+assert.deepEqual(bot(MAIN_BOT_ID).face, { shape: 'helm', color: 'indigo' });
+const regular = state.bots.filter(b => b.kind === 'bot');
+assert.equal(new Set(regular.map(b => `${b.face.shape}:${b.face.color}`)).size, regular.length, 'seed bots should have distinct faces');
+assert.equal(new Set(regular.map(b => b.face.color)).size, regular.length, 'seed bots should have distinct colors');
+assert.ok(state.bots.every(b => b.kind === 'main' || b.face.shape !== 'helm'), 'helm shape is reserved for the main bot');
+
+// 旧数据没有头像：恢复时补上，且不和已有头像重复
+const legacy = JSON.parse(JSON.stringify(state));
+legacy.bots.forEach(b => { if (b.id !== 'work') delete b.face; });
+const migrated = restoreBotos(JSON.stringify(legacy), seedBotos);
+assert.ok(migrated.bots.every(b => b.face && b.face.shape && b.face.color));
+assert.deepEqual(migrated.bots.find(b => b.id === 'work').face, bot('work').face, 'existing faces are kept');
+const migratedRegular = migrated.bots.filter(b => b.kind === 'bot');
+assert.equal(new Set(migratedRegular.map(b => `${b.face.shape}:${b.face.color}`)).size, migratedRegular.length);
+
+// 头像状态：工作中 > 刚完成 > 需要你 > 空闲
+assert.equal(faceStateOf(sent, sent.bots.find(b => b.id === 'research')), 'working');
+assert.equal(faceStateOf(state, bot('research'), ['research']), 'done');
+assert.equal(faceStateOf(state, bot('risk')), 'needs');
+assert.equal(faceStateOf(state, bot('work')), 'idle');
+assert.equal(faceStateOf(state, bot(MAIN_BOT_ID)), 'needs', 'main bot needs you when any bot does');
+
 console.log('botos checks passed');

@@ -1,0 +1,59 @@
+/* 眼睛颜色：亮色主题里底色偏深，用白眼；深色主题里底色变亮，用夜航色眼。纯黑头像始终用浅色眼。 */
+.kdx-theme[data-theme='light'] { --kdx-eye-on-color: #FFFFFF; --kdx-eye-on-black: #FFFFFF; }
+.kdx-theme[data-theme='dark'] { --kdx-eye-on-color: #1C1D20; --kdx-eye-on-black: #E9E2D3; }
+
+.kdx-face { display: inline-block; flex-shrink: 0; line-height: 0; position: relative; vertical-align: middle; }
+.kdx-face svg { display: block; overflow: visible; }
+.kdx-face-body path { fill: var(--kdx-face-fill); stroke: var(--kdx-face-fill); stroke-linejoin: round; }
+.kdx-face-body circle { fill: var(--kdx-face-fill); }
+.kdx-face-body .kdx-face-ring { fill: none; stroke: var(--kdx-face-fill); }
+.kdx-face-eyes circle { fill: var(--kdx-face-eye-color); }
+.kdx-face-smile { fill: none; stroke: var(--kdx-face-eye-color); stroke-linecap: round; }
+.kdx-face-eyes { transform-box: view-box; transform-origin: 24px 24px; transition: transform var(--u4f-duration-base, 240ms) var(--u4f-easing-standard, ease); }
+/* 身体：以底部中心为原点做呼吸、跳跃等形变，像软软的小玩偶 */
+.kdx-face-squish { transform-box: view-box; transform-origin: 24px 44px; }
+
+/* 纯黑在深色主题里会和夜航背景融在一起，加一道 border-strong 描边 */
+.kdx-theme[data-theme='dark'] .kdx-face--black svg { --kdx-edge: var(--u4f-border-strong);
+  filter: drop-shadow(1px 0 0 var(--kdx-edge)) drop-shadow(-1px 0 0 var(--kdx-edge)) drop-shadow(0 1px 0 var(--kdx-edge)) drop-shadow(0 -1px 0 var(--kdx-edge)); }
+
+/* 空闲：偶尔眨眼，身体轻轻呼吸 */
+.kdx-face--idle .kdx-face-eyes circle { transform-box: fill-box; transform-origin: center; animation: kdx-blink 5.2s infinite; }
+@keyframes kdx-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.12); } }
+.kdx-face--idle .kdx-face-squish { animation: kdx-breathe 3.6s ease-in-out infinite alternate; }
+@keyframes kdx-breathe { from { transform: scale(1, 1); } to { transform: scale(1.03, .965); } }
+
+/* 工作中：左右来回看，身体跟着轻轻起伏；节奏用 KodaX 的划桨周期 */
+.kdx-face--working .kdx-face-eyes { animation: kdx-look var(--u4f-oar-cycle, 1200ms) var(--u4f-easing-oar, ease-in-out) infinite alternate; }
+@keyframes kdx-look { from { transform: translateX(-2.6px); } to { transform: translateX(2.6px); } }
+.kdx-face--working .kdx-face-squish { animation: kdx-bob calc(var(--u4f-oar-cycle, 1200ms) / 2) var(--u4f-easing-oar, ease-in-out) infinite alternate; }
+@keyframes kdx-bob { from { transform: translateY(0); } to { transform: translateY(-1.5px); } }
+
+/* 需要你：看向你（略下移、放大），歪头晃一下，亮朱砂舵点 */
+.kdx-face--needs .kdx-face-eyes { transform: translateY(1.6px) scale(1.15); }
+.kdx-face--needs .kdx-face-squish { animation: kdx-wobble 2.6s ease-in-out infinite; }
+@keyframes kdx-wobble { 0%, 70%, 100% { transform: rotate(0); } 77% { transform: rotate(-6deg); } 85% { transform: rotate(5deg); } 92% { transform: rotate(-2deg); } }
+.kdx-face-helm { fill: var(--u4f-helm); stroke: var(--u4f-surface-raised); stroke-width: 2.5; transform-box: fill-box; transform-origin: center; animation: kdx-helm var(--u4f-oar-cycle, 1200ms) var(--u4f-easing-oar, ease-in-out) infinite alternate; }
+@keyframes kdx-helm { from { opacity: .55; } to { opacity: 1; } }
+
+/* 刚完成：眯眼笑，原地蹦一下（起跳拉长、落地压扁、回弹） */
+.kdx-face--done .kdx-face-eyes { animation: kdx-settle var(--u4f-helm-settle, 320ms) var(--u4f-easing-helm, ease-out) both; }
+@keyframes kdx-settle { from { transform: translateY(1.5px) scale(.85); } }
+.kdx-face--done .kdx-face-squish { animation: kdx-hop 2.8s var(--u4f-easing-standard, ease) 1 both; }
+.kdx-face--done.kdx-face--loop .kdx-face-squish { animation-iteration-count: infinite; }
+@keyframes kdx-hop {
+  0%, 40%, 100% { transform: translateY(0) scale(1, 1); }
+  8% { transform: translateY(0) scale(1.08, .9); }
+  18% { transform: translateY(-5px) scale(.94, 1.07); }
+  28% { transform: translateY(0) scale(1.07, .92); }
+  34% { transform: translateY(0) scale(.98, 1.02); }
+}
+
+/* 群聊叠放：每个成员头像外圈留一道底色描边 */
+.kdx-face-stack { display: inline-block; position: relative; flex-shrink: 0; vertical-align: middle; }
+.kdx-face-stack-item { position: absolute; line-height: 0; --kdx-ring: var(--u4f-surface-raised);
+  filter: drop-shadow(1.5px 0 0 var(--kdx-ring)) drop-shadow(-1.5px 0 0 var(--kdx-ring)) drop-shadow(0 1.5px 0 var(--kdx-ring)) drop-shadow(0 -1.5px 0 var(--kdx-ring)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .kdx-face *, .kdx-face { animation: none !important; transition: none !important; }
+}

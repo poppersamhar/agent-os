@@ -1,6 +1,7 @@
 import { useState, type Dispatch, type ReactNode } from 'react';
 import { ArrowLeft, KeyRound, Plus, Search, Trash2, X } from 'lucide-react';
-import { MAIN_BOT_ID, uid, type Bot, type BotosAction, type BotosState, type Mcp, type McpKind, type Skill, type WidgetKind } from './botModel';
+import { MAIN_BOT_ID, faceStateOf, memberBots, uid, type Bot, type BotosAction, type BotosState, type Mcp, type McpKind, type Skill, type WidgetKind } from './botModel';
+import { sameFace } from './botFaces';
 import BotAvatar from './BotAvatar';
 import BotEditor from './BotEditor';
 import type { BotDraft } from './botDraft';
@@ -30,12 +31,12 @@ function useQuery() {
 
 function BotDetail({ bot, state, dispatch, onBack, onOpenBot }: { bot: Bot; state: BotosState; dispatch: Dispatch<BotosAction>; onBack: () => void; onOpenBot: (id: string) => void }) {
   const isMain = bot.kind === 'main';
-  const [draft, setDraft] = useState<BotDraft | null>(isMain ? null : { name: bot.name, kind: bot.kind as BotDraft['kind'], prompt: bot.prompt, model: bot.model, skillIds: bot.skillIds, mcpIds: bot.mcpIds, memberIds: bot.memberIds });
+  const [draft, setDraft] = useState<BotDraft | null>(isMain ? null : { name: bot.name, kind: bot.kind as BotDraft['kind'], prompt: bot.prompt, model: bot.model, skillIds: bot.skillIds, mcpIds: bot.mcpIds, memberIds: bot.memberIds, face: bot.face });
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const dirty = draft && (draft.name !== bot.name || draft.prompt !== bot.prompt || draft.model !== bot.model || draft.skillIds.join() !== bot.skillIds.join() || draft.mcpIds.join() !== bot.mcpIds.join() || draft.memberIds.join() !== bot.memberIds.join());
+  const dirty = draft && (draft.name !== bot.name || draft.prompt !== bot.prompt || draft.model !== bot.model || draft.skillIds.join() !== bot.skillIds.join() || draft.mcpIds.join() !== bot.mcpIds.join() || draft.memberIds.join() !== bot.memberIds.join() || (!!draft.face && !sameFace(draft.face, bot.face)));
   return <div className="bos-detail">
     <button type="button" className="bos-back" onClick={onBack}><ArrowLeft size={14} />全部 Bot</button>
-    <div className="bos-detail-title"><BotAvatar bot={bot} size={40} /><div><h2>{bot.name}</h2><p>{isMain ? '主 Bot · 统一管理全部 Bot 与能力' : bot.kind === 'group' ? `群聊 · ${bot.memberIds.length} 个成员` : `Bot · 创建于 ${bot.createdAt}`}</p></div>
+    <div className="bos-detail-title"><BotAvatar bot={bot} size={44} state={faceStateOf(state, bot)} members={memberBots(state, bot)} /><div><h2>{bot.name}</h2><p>{isMain ? '主 Bot · 统一管理全部 Bot 与能力' : bot.kind === 'group' ? `群聊 · ${bot.memberIds.length} 个成员` : `Bot · 创建于 ${bot.createdAt}`}</p></div>
       <button type="button" className="bos-secondary" onClick={() => onOpenBot(bot.id)}>打开对话</button></div>
     {draft ? <BotEditor draft={draft} onChange={setDraft} state={state} editingId={bot.id} /> : <p className="bos-hint">主 Bot 由系统维护，汇总全部 Bot 的状态。</p>}
     {draft ? <div className="bos-form-actions">
@@ -65,7 +66,7 @@ export function BotHub({ state, dispatch, onOpenBot, onClose, onNewBot }: HubPro
       <table className="bos-table">
         <thead><tr><th>Bot</th><th>类型</th><th>Skill</th><th>MCP</th><th>记忆</th><th>近 7 天运行</th></tr></thead>
         <tbody>{list.map(b => <tr key={b.id} onClick={() => setSelected(b.id)} tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') setSelected(b.id); }}>
-          <td><span className="bos-row-name"><BotAvatar bot={b} size={24} />{b.name}</span></td>
+          <td><span className="bos-row-name"><BotAvatar bot={b} size={26} state={faceStateOf(state, b)} members={memberBots(state, b)} />{b.name}</span></td>
           <td>{b.kind === 'main' ? '主 Bot' : b.kind === 'group' ? `群聊 · ${b.memberIds.length} 成员` : 'Bot'}</td>
           <td>{b.skillIds.map(id => state.skills.find(s => s.id === id)?.name).filter(Boolean).join('、') || '—'}</td>
           <td>{b.mcpIds.map(id => state.mcps.find(m => m.id === id)?.name).filter(Boolean).join('、') || '—'}</td>
@@ -120,8 +121,8 @@ export function SkillHub({ state, dispatch, onOpenBot, onClose }: HubProps) {
   </HubFrame>;
 }
 
-function InstallList({ bots, installed, onToggle }: { bots: Bot[]; installed: (b: Bot) => boolean; onToggle: (b: Bot) => void }) {
-  return <ul className="bos-install">{bots.map(b => <li key={b.id}><span className="bos-row-name"><BotAvatar bot={b} size={22} />{b.name}</span>
+function InstallList({ state, bots, installed, onToggle }: { state: BotosState; bots: Bot[]; installed: (b: Bot) => boolean; onToggle: (b: Bot) => void }) {
+  return <ul className="bos-install">{bots.map(b => <li key={b.id}><span className="bos-row-name"><BotAvatar bot={b} size={24} members={memberBots(state, b)} />{b.name}</span>
     <button type="button" className={installed(b) ? 'bos-secondary' : 'bos-primary'} onClick={() => onToggle(b)}>{installed(b) ? '卸载' : '安装'}</button></li>)}</ul>;
 }
 
@@ -136,7 +137,7 @@ function SkillDetail({ skill, state, dispatch, onBack, onOpenBot }: { skill: Ski
       <div><dt>仪表盘组件</dt><dd>{skill.widgets.map(w => w.title).join('、') || '无'}</dd></div>
     </dl>
     <h3 className="bos-section-title">安装到 Bot <small>安装后 Bot 的仪表盘会加入这个 Skill 提供的组件</small></h3>
-    <InstallList bots={bots} installed={b => b.skillIds.includes(skill.id)} onToggle={b => dispatch({ type: 'update-bot', id: b.id, patch: { skillIds: b.skillIds.includes(skill.id) ? b.skillIds.filter(id => id !== skill.id) : [...b.skillIds, skill.id] } })} />
+    <InstallList state={state} bots={bots} installed={b => b.skillIds.includes(skill.id)} onToggle={b => dispatch({ type: 'update-bot', id: b.id, patch: { skillIds: b.skillIds.includes(skill.id) ? b.skillIds.filter(id => id !== skill.id) : [...b.skillIds, skill.id] } })} />
     <p className="bos-hint">在 Bot 中查看效果：{usedBy(state, 'skillIds', skill.id).map(b => <button type="button" key={b.id} className="bos-link" onClick={() => onOpenBot(b.id)}>{b.name}</button>)}</p>
   </div>;
 }
@@ -180,7 +181,7 @@ function McpDetail({ mcp, state, dispatch, onBack }: { mcp: Mcp; state: BotosSta
       <div><dt>工具</dt><dd>{mcp.tools.join('、') || '—'}</dd></div>
     </dl>
     <h3 className="bos-section-title">授权给 Bot <small>{mcp.enabled ? '授权后 Bot 可以调用这些工具' : '停用期间，已授权的 Bot 暂时无法使用'}</small></h3>
-    <InstallList bots={bots} installed={b => b.mcpIds.includes(mcp.id)} onToggle={b => dispatch({ type: 'update-bot', id: b.id, patch: { mcpIds: b.mcpIds.includes(mcp.id) ? b.mcpIds.filter(id => id !== mcp.id) : [...b.mcpIds, mcp.id] } })} />
+    <InstallList state={state} bots={bots} installed={b => b.mcpIds.includes(mcp.id)} onToggle={b => dispatch({ type: 'update-bot', id: b.id, patch: { mcpIds: b.mcpIds.includes(mcp.id) ? b.mcpIds.filter(id => id !== mcp.id) : [...b.mcpIds, mcp.id] } })} />
   </div>;
 }
 

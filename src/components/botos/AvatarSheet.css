@@ -1,0 +1,42 @@
+.kdx-sheet { height: 100dvh; overflow: auto; background: var(--u4f-background); color: var(--u4f-text); font-family: var(--u4f-font-sans); font-size: 13px; padding: 28px 40px 64px; }
+.kdx-sheet code { font-family: var(--u4f-font-mono); font-size: 11px; }
+.kdx-back { display: inline-flex; align-items: center; gap: 4px; color: var(--u4f-text-muted); text-decoration: none; font-size: 12px; }
+.kdx-back:hover { color: var(--u4f-text); }
+.kdx-sheet-head h1 { margin: 14px 0 0; font-size: 28px; line-height: 36px; font-weight: 700; }
+.kdx-sheet-head p { margin: 8px 0 0; max-width: 820px; color: var(--u4f-text-muted); line-height: 1.8; }
+.kdx-section { margin-top: 36px; }
+.kdx-section > header h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.kdx-section > header p { margin: 4px 0 14px; color: var(--u4f-text-muted); }
+.kdx-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 16px; }
+.kdx-panel { position: relative; background: var(--u4f-background); color: var(--u4f-text); border: 1px solid var(--u4f-border); border-radius: var(--u4f-radius-lg); padding: 38px 22px 22px; min-width: 0; }
+.kdx-panel-label { position: absolute; top: 13px; left: 18px; font-size: 11px; font-weight: 500; letter-spacing: .04em; color: var(--u4f-text-muted); }
+.kdx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 16px 8px; }
+.kdx-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; min-width: 0; }
+.kdx-cell small { color: var(--u4f-text-muted); font-size: 11px; line-height: 1.5; }
+.kdx-matrix { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px 4px; justify-items: center; }
+.kdx-states { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.kdx-state, .kdx-card, .kdx-mock-card { background: var(--u4f-surface-raised); border: 1px solid var(--u4f-border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.kdx-state { align-items: center; text-align: center; }
+.kdx-state-faces { display: flex; gap: 12px; }
+.kdx-state small, .kdx-card small { color: var(--u4f-text-muted); font-size: 11px; line-height: 1.6; }
+.kdx-sizes { display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap; }
+.kdx-specials { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.kdx-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; min-height: 44px; }
+.kdx-photo { width: 42px; height: 42px; border-radius: var(--u4f-radius-full); background: var(--u4f-primary-subtle); color: var(--u4f-primary); display: grid; place-items: center; position: relative; }
+.kdx-photo.is-needs::after { content: ''; position: absolute; top: -1px; right: -1px; width: 11px; height: 11px; border-radius: var(--u4f-radius-full); background: var(--u4f-helm); box-shadow: 0 0 0 2px var(--u4f-surface-raised); }
+.kdx-mock { display: grid; gap: 14px; }
+.kdx-mock-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kdx-mock .bos-current, .kdx-mock .bos-bot-pill { display: inline-flex; align-items: center; gap: 8px; padding: 0 18px 0 11px; min-width: 0; }
+.kdx-mock-agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px 6px; }
+.kdx-textarea { border: 1px solid var(--u4f-border-strong); border-radius: var(--u4f-radius-md); padding: 8px 10px; background: var(--u4f-surface-raised); color: var(--u4f-text); font: inherit; resize: vertical; outline: none; }
+.kdx-textarea:focus { border-color: var(--u4f-focus); }
+.kdx-foot { margin: 40px 0 0; color: var(--u4f-text-muted); font-size: 12px; }
+.kdx-sheet :focus-visible { outline: 2px solid var(--u4f-focus); outline-offset: 2px; }
+@media (max-width: 720px) {
+  .kdx-sheet { padding: 20px 14px 48px; }
+  .kdx-pair { grid-template-columns: 1fr; }
+  .kdx-matrix { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+.kdx-picker-demo { display: grid; gap: 10px; }
+.kdx-label { margin: 0; font-size: 12px; font-weight: 500; color: var(--u4f-text-muted); }

@@ -1,19 +1,13 @@
 import { useMemo, useState } from 'react';
 import { ArrowRight, CircleCheck, CircleDot, FileText, GitPullRequest, MessageSquare, TriangleAlert } from 'lucide-react';
-import { HISTORY_DAYS, MAIN_BOT_ID, composeDashboard, pendingCount, seeded, type Bot, type BotosState, type WidgetSlot } from './botModel';
+import { HISTORY_DAYS, MAIN_BOT_ID, composeDashboard, faceStateOf, memberBots, pendingCount, seeded, waitingFor, type Bot, type BotosState, type WaitingItem, type WidgetSlot } from './botModel';
 import BotAvatar from './BotAvatar';
 
 // 固定的 Widget 组件库：Spec 只声明「放什么」，这里负责「怎么画」。
 
-interface WaitingItem { botId: string; title: string; when: 'today' | 'week' | 'later' }
-const waitingByBot: Record<string, Omit<WaitingItem, 'botId'>[]> = {
-  risk: [{ title: '确认华东二号供应商延期方案', when: 'today' }, { title: '核对物料单价上涨原因', when: 'today' }],
-  data: [{ title: '决定 dw_orders 负值是否回滚', when: 'week' }],
-  research: [{ title: '确认下期调研对象', when: 'later' }],
-};
 const whenLabel = { today: '今天', week: '本周', later: '稍后' } as const;
 
-interface Ctx { state: BotosState; bot: Bot; scope: Bot[]; onSelectBot: (id: string) => void }
+interface Ctx { state: BotosState; bot: Bot; scope: Bot[]; recentlyDone: string[]; onSelectBot: (id: string) => void }
 
 function scopeBots(state: BotosState, bot: Bot): Bot[] {
   if (bot.kind === 'main') return state.bots.filter(b => b.id !== MAIN_BOT_ID);
@@ -29,7 +23,7 @@ function sumHistory(bots: Bot[]): [number, number][] {
 }
 
 function waitingItems({ scope }: Ctx): WaitingItem[] {
-  return scope.flatMap(b => (waitingByBot[b.id] ?? []).map(item => ({ ...item, botId: b.id })));
+  return scope.flatMap(b => waitingFor(b.id));
 }
 
 function Waiting(ctx: Ctx) {
@@ -37,22 +31,21 @@ function Waiting(ctx: Ctx) {
   const counts = (['today', 'week', 'later'] as const).map(when => items.filter(i => i.when === when).length);
   const total = items.length;
   const r = 34, c = 2 * Math.PI * r;
-  const colors = ['#c2410c', '#fb923c', '#d4d4d0'];
   let offset = 0;
   return <div className="bos-waiting">
     <div className="bos-waiting-body">
       <svg viewBox="0 0 84 84" className="bos-donut" aria-hidden="true">
-        <circle cx="42" cy="42" r={r} fill="none" stroke="#eeeeea" strokeWidth="9" />
+        <circle cx="42" cy="42" r={r} fill="none" className="bos-donut-track" strokeWidth="9" />
         {total ? counts.map((n, i) => {
           const len = (n / total) * c;
-          const el = <circle key={i} cx="42" cy="42" r={r} fill="none" stroke={colors[i]} strokeWidth="9" strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-offset} transform="rotate(-90 42 42)" />;
+          const el = <circle key={i} cx="42" cy="42" r={r} fill="none" className={`bos-donut-seg--${(['today', 'week', 'later'] as const)[i]}`} strokeWidth="9" strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-offset} transform="rotate(-90 42 42)" />;
           offset += len;
           return el;
         }) : null}
         <text x="42" y="44" textAnchor="middle" className="bos-donut-num">{total}</text>
         <text x="42" y="57" textAnchor="middle" className="bos-donut-label">件待处理</text>
       </svg>
-      <ul className="bos-legend">{(['today', 'week', 'later'] as const).map((when, i) => <li key={when}><i style={{ background: colors[i] }} />{whenLabel[when]}<b>{counts[i]}</b></li>)}</ul>
+      <ul className="bos-legend">{(['today', 'week', 'later'] as const).map((when, i) => <li key={when}><i className={`is-${when}`} />{whenLabel[when]}<b>{counts[i]}</b></li>)}</ul>
     </div>
     {total
       ? <button type="button" className="bos-primary-action" onClick={() => ctx.onSelectBot(items[0].botId)}>处理这 {total} 件 <ArrowRight size={14} /></button>
@@ -63,13 +56,13 @@ function Waiting(ctx: Ctx) {
 function Agents(ctx: Ctx & { members?: boolean }) {
   const bots = ctx.members ? ctx.state.bots.filter(b => ctx.bot.memberIds.includes(b.id)) : ctx.scope;
   return <div className="bos-agents">
-    <div className="bos-agents-legend"><span><i className="is-working" />工作中</span><span><i />空闲</span></div>
     <div className="bos-agents-grid">{bots.map(b => {
-      const working = pendingCount(ctx.state, b.id) > 0;
-      return <button type="button" key={b.id} className="bos-agent" onClick={() => ctx.onSelectBot(b.id)} title={`打开 ${b.name}`}>
-        <BotAvatar bot={b} size={42} working={working} />
+      const face = faceStateOf(ctx.state, b, ctx.recentlyDone);
+      const label = { working: '工作中', done: '刚完成', needs: '需要你', idle: `${b.skillIds.length} Skill · ${b.mcpIds.length} MCP` }[face];
+      return <button type="button" key={b.id} className={`bos-agent bos-agent--${face}`} onClick={() => ctx.onSelectBot(b.id)} title={`打开 ${b.name}`}>
+        <BotAvatar bot={b} size={42} state={face} members={memberBots(ctx.state, b)} />
         <span>{b.name}</span>
-        <small>{working ? '工作中' : `${b.skillIds.length} Skill · ${b.mcpIds.length} MCP`}</small>
+        <small>{label}</small>
       </button>;
     })}</div>
   </div>;
@@ -109,7 +102,7 @@ function Runs(ctx: Ctx) {
         {([28, 56] as const).map(n => <button type="button" key={n} aria-pressed={range === n} onClick={() => setRange(n)}>{n} 天</button>)}
       </div>
     </div>
-    <div className="bos-dots" style={{ gridTemplateColumns: `repeat(${history.length}, 1fr)` }} role="img" aria-label={`近 ${range} 天运行 ${totalAuto + totalNeeded} 次，其中需要你介入 ${totalNeeded} 次`}>
+    <div className="bos-dots" style={{ gridTemplateColumns: `repeat(${history.length}, minmax(0, 1fr))` }} role="img" aria-label={`近 ${range} 天运行 ${totalAuto + totalNeeded} 次，其中需要你介入 ${totalNeeded} 次`}>
       {history.map(([auto, needed], day) => <div key={day} className="bos-dot-col">
         {Array.from({ length: rows }, (_, row) => {
           const level = rows - row; // 从上到下
@@ -213,9 +206,9 @@ function sourceLabel(slot: WidgetSlot, state: BotosState): string | null {
   return name ? `${type === 'skill' ? 'Skill' : 'MCP'} · ${name}` : null;
 }
 
-export default function BotDashboard({ state, bot, onSelectBot }: { state: BotosState; bot: Bot; onSelectBot: (id: string) => void }) {
+export default function BotDashboard({ state, bot, recentlyDone = [], onSelectBot }: { state: BotosState; bot: Bot; recentlyDone?: string[]; onSelectBot: (id: string) => void }) {
   const spec = useMemo(() => composeDashboard(bot, state.skills, state.mcps), [bot, state.skills, state.mcps]);
-  const ctx: Ctx = { state, bot, scope: scopeBots(state, bot), onSelectBot };
+  const ctx: Ctx = { state, bot, scope: scopeBots(state, bot), recentlyDone, onSelectBot };
   const working = ctx.scope.filter(b => pendingCount(state, b.id) > 0).length;
   const waiting = waitingItems(ctx).length;
   const summary = bot.kind === 'main'

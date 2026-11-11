@@ -1,0 +1,86 @@
+/*
+ * KodaX 主题配色（亮色「宣纸」/ 深色「夜航」）
+ * 来源：UI4Future · KodaX Design（Apache-2.0），content/themes/kodax/theme.css 与 content/tokens/base.css。
+ * 色值原样复制；作用域为 .kdx-theme，由 data-theme 切换（工作空间和样稿页都挂这个类）。
+ * 用色规则：朱砂（helm）只用于舵点（当前进行中的一步）、需要人处理的错误与危险操作；不提高饱和度，不用渐变。
+ */
+.kdx-theme {
+  --u4f-space-1: 4px; --u4f-space-2: 8px; --u4f-space-3: 12px; --u4f-space-4: 16px;
+  --u4f-space-6: 24px; --u4f-space-8: 32px; --u4f-space-12: 48px;
+  --u4f-radius-sm: 4px; --u4f-radius-md: 8px; --u4f-radius-lg: 16px; --u4f-radius-full: 9999px;
+  --u4f-duration-instant: 100ms; --u4f-duration-fast: 160ms; --u4f-duration-base: 240ms; --u4f-duration-slow: 400ms;
+  --u4f-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --u4f-easing-enter: cubic-bezier(0, 0, 0, 1); --u4f-easing-exit: cubic-bezier(0.3, 0, 1, 1);
+  --u4f-oar-cycle: 1200ms; --u4f-easing-oar: cubic-bezier(0.45, 0, 0.55, 1);
+  --u4f-helm-settle: 320ms; --u4f-easing-helm: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --u4f-font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --u4f-font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+.kdx-theme[data-theme='light'] {
+  --u4f-background: #F3EFE8;
+  --u4f-surface: #FAF8F4;
+  --u4f-surface-raised: #FFFFFF;
+  --u4f-border: #E0DAD1;
+  --u4f-border-strong: #CAC3B9;
+  --u4f-text: #222D45;
+  --u4f-text-muted: #6A6257;
+  --u4f-primary: #34466B;
+  --u4f-primary-hover: #253554;
+  --u4f-primary-subtle: #E1E8F6;
+  --u4f-on-primary: #FFFFFF;
+  --u4f-helm: #C0573E;
+  --u4f-danger: #AE4730;
+  --u4f-danger-subtle: #FEE9E2;
+  --u4f-success: #067132;
+  --u4f-success-subtle: #E4F8E7;
+  --u4f-warning: #915B02;
+  --u4f-warning-subtle: #FFEFDD;
+  --u4f-info: #34466B;
+  --u4f-focus: #5A71A1;
+  --u4f-shadow-raised: 0 4px 16px rgba(52, 70, 107, 0.10);
+  --u4f-viz-1: #005FD3;
+  --u4f-viz-2: #008C8C;
+  --u4f-viz-3: #9F7100;
+  --u4f-viz-4: #8962C5;
+  --u4f-viz-5: #1B9247;
+  --u4f-viz-6: #C25237;
+  --u4f-viz-7: #B94F87;
+  color-scheme: light;
+}
+
+.kdx-theme[data-theme='dark'] {
+  --u4f-background: #1C1D20;
+  --u4f-surface: #242528;
+  --u4f-surface-raised: #2E2F33;
+  --u4f-border: #3C3D41;
+  --u4f-border-strong: #53555A;
+  --u4f-text: #E9E2D3;
+  --u4f-text-muted: #B0AAA0;
+  --u4f-primary: #E9E2D3;
+  --u4f-primary-hover: #F5F0E6;
+  --u4f-primary-subtle: #272E3B;
+  --u4f-on-primary: #1C1D20;
+  --u4f-helm: #D9765A;
+  --u4f-danger: #D9765A;
+  --u4f-danger-subtle: #321A14;
+  --u4f-success: #6CC982;
+  --u4f-success-subtle: #1A2E1E;
+  --u4f-warning: #E7A045;
+  --u4f-warning-subtle: #362512;
+  --u4f-info: #AEBEDF;
+  --u4f-focus: #AEBEDF;
+  --u4f-shadow-raised: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --u4f-viz-1: #71A5F5;
+  --u4f-viz-2: #08BCBC;
+  --u4f-viz-3: #CF9A35;
+  --u4f-viz-4: #B191EA;
+  --u4f-viz-5: #62BB78;
+  --u4f-viz-6: #EA856B;
+  --u4f-viz-7: #E181B0;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kdx-theme { --u4f-oar-cycle: 0ms; --u4f-helm-settle: 0ms; --u4f-easing-helm: linear; }
+}

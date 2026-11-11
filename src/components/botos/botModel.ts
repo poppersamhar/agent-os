@@ -2,6 +2,8 @@
 // Bot 是唯一的基本单元：对话、记忆、已装能力与仪表盘都属于 Bot。
 // Skill / MCP 是账号级共享能力；仪表盘由 Bot 的 prompt + 已装能力组装为声明式 Spec。
 
+import { MAIN_FACE, faceShapes, pickFace, type FaceSpec, type FaceState } from './botFaces';
+
 export type WidgetKind =
   | 'waiting' | 'agents' | 'done' | 'runs' | 'artifacts' | 'members'
   | 'feed' | 'repo' | 'sources' | 'alerts' | 'trend' | 'metrics' | 'checks';
@@ -37,6 +39,8 @@ export interface MemoryItem { id: string; text: string; scope: 'team' | 'persona
 export type BotKind = 'main' | 'bot' | 'group';
 export interface Bot {
   id: string; name: string; kind: BotKind; prompt: string; model: string;
+  /** 头像：形状 × 颜色。主 Bot 固定为「舵」。 */
+  face: FaceSpec;
   skillIds: string[]; mcpIds: string[]; memberIds: string[];
   memory: MemoryItem[]; messages: BotMessage[];
   /** 最近 56 天的每日运行数：[自动完成, 需要你介入] */
@@ -145,6 +149,42 @@ export function pendingCount(state: BotosState, botId: string): number {
   return state.pending.filter(task => task.botId === botId).length;
 }
 
+// ───────────────────────── 待你处理（演示数据）与头像状态 ─────────────────────────
+
+export type WaitingWhen = 'today' | 'week' | 'later';
+export interface WaitingItem { botId: string; title: string; when: WaitingWhen }
+const demoWaiting: Record<string, Omit<WaitingItem, 'botId'>[]> = {
+  risk: [{ title: '确认华东二号供应商延期方案', when: 'today' }, { title: '核对物料单价上涨原因', when: 'today' }],
+  data: [{ title: '决定 dw_orders 负值是否回滚', when: 'week' }],
+  research: [{ title: '确认下期调研对象', when: 'later' }],
+};
+export const waitingFor = (botId: string): WaitingItem[] => (demoWaiting[botId] ?? []).map(item => ({ ...item, botId }));
+
+export const memberBots = (state: BotosState, bot: Bot): Bot[] => state.bots.filter(b => bot.memberIds.includes(b.id));
+
+/** 头像状态：工作中 > 刚完成 > 需要你 > 空闲。主 Bot 与群聊汇总下属 Bot 的「需要你」。 */
+export function faceStateOf(state: BotosState, bot: Bot, recentlyDone: string[] = []): FaceState {
+  if (pendingCount(state, bot.id) > 0) return 'working';
+  if (recentlyDone.includes(bot.id)) return 'done';
+  const scope = bot.kind === 'main' ? state.bots : bot.kind === 'group' ? [bot, ...memberBots(state, bot)] : [bot];
+  return scope.some(b => waitingFor(b.id).length) ? 'needs' : 'idle';
+}
+
+const validFace = (face: unknown): face is FaceSpec => !!face && typeof face === 'object'
+  && (face as FaceSpec).shape in faceShapes && ['indigo', 'cinnabar', 'taupe', 'black'].includes((face as FaceSpec).color);
+
+/** 给缺少头像的 Bot 补上：主 Bot 用「舵」，其余按名称自动分配、避开已用组合。 */
+export function assignFaces<T extends Omit<Bot, 'face'> & { face?: unknown }>(bots: T[]): Bot[] {
+  const taken: FaceSpec[] = [MAIN_FACE, ...bots.filter(b => b.kind !== 'main' && validFace(b.face)).map(b => b.face as FaceSpec)];
+  return bots.map(bot => {
+    if (bot.kind === 'main') return { ...bot, face: MAIN_FACE };
+    if (validFace(bot.face)) return bot as Bot;
+    const face = pickFace(bot.name, taken);
+    taken.push(face);
+    return { ...bot, face };
+  });
+}
+
 // ───────────────────────── Reducer ─────────────────────────
 
 export type BotosAction =
@@ -153,7 +193,7 @@ export type BotosAction =
   | { type: 'reply'; botId: string; messages: BotMessage[] }
   | { type: 'complete'; taskId: string; messages: BotMessage[]; memory?: MemoryItem; needsYou?: boolean }
   | { type: 'create-bot'; bot: Bot }
-  | { type: 'update-bot'; id: string; patch: Partial<Pick<Bot, 'name' | 'prompt' | 'model' | 'skillIds' | 'mcpIds' | 'memberIds'>> }
+  | { type: 'update-bot'; id: string; patch: Partial<Pick<Bot, 'name' | 'prompt' | 'model' | 'skillIds' | 'mcpIds' | 'memberIds' | 'face'>> }
   | { type: 'delete-bot'; id: string }
   | { type: 'forget'; botId: string; memoryId: string }
   | { type: 'create-skill'; skill: Skill }
@@ -230,7 +270,7 @@ export function restoreBotos(raw: string | null, fallback: () => BotosState): Bo
   try {
     const value = JSON.parse(raw) as Partial<BotosState>;
     if (value?.version !== 1 || !Array.isArray(value.bots) || !Array.isArray(value.order) || !Array.isArray(value.skills) || !Array.isArray(value.mcps)) return fallback();
-    const bots = value.bots.filter((bot): bot is Bot => !!bot && typeof bot.id === 'string' && Array.isArray(bot.messages) && Array.isArray(bot.history));
+    const bots = assignFaces(value.bots.filter((bot): bot is Bot => !!bot && typeof bot.id === 'string' && Array.isArray(bot.messages) && Array.isArray(bot.history)));
     if (!bots.some(bot => bot.id === MAIN_BOT_ID)) return fallback();
     const ids = new Set(bots.map(bot => bot.id));
     const order = value.order.filter(id => ids.has(id) && id !== MAIN_BOT_ID);

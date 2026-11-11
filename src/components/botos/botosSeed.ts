@@ -1,4 +1,4 @@
-import { MAIN_BOT_ID, seedHistory, type Bot, type BotMessage, type BotosState, type Mcp, type Skill } from './botModel';
+import { MAIN_BOT_ID, assignFaces, seedHistory, type Bot, type BotMessage, type BotosState, type Mcp, type Skill } from './botModel';
 
 export const seedSkills: Skill[] = [
   { id: 'research', name: '网页调研', category: '调研', version: '1.4.0', owner: 'Samhar', calls: 312, failRate: 0.02,
@@ -31,12 +31,14 @@ export const seedMcps: Mcp[] = [
 const msg = (author: BotMessage['author'], name: string, text: string, time: string, attachment?: string): BotMessage =>
   ({ id: `seed-${name}-${time}-${text.slice(0, 6)}`, author, name, text, time, attachment });
 
-const bot = (b: Omit<Bot, 'history' | 'memberIds' | 'createdAt'> & { memberIds?: string[]; scale?: number }): Bot => ({
+type SeedBot = Omit<Bot, 'face'>;
+const bot = (b: Omit<SeedBot, 'history' | 'memberIds' | 'createdAt'> & { memberIds?: string[]; scale?: number }): SeedBot => ({
   memberIds: [], createdAt: '2026-09-01', history: seedHistory(b.id, b.scale ?? 1), ...b,
 });
 
 export function seedBotos(): BotosState {
-  const bots: Bot[] = [
+  // 头像按名称自动分配（与新建 Bot 的规则相同）。
+  const bots: Bot[] = assignFaces([
     bot({
       id: MAIN_BOT_ID, name: '主 Bot', kind: 'main', model: '系统默认', skillIds: [], mcpIds: [],
       prompt: '统一管理全部 Bot、Skill 与 MCP，汇总进展与待处理事项。',
@@ -93,7 +95,7 @@ export function seedBotos(): BotosState {
         msg('member', 'work', '演示稿初版已完成，共 6 页。', '11-07', '品牌升级提案.pptx'),
       ],
     }),
-  ];
+  ]);
   return {
     version: 1, bots, currentId: 'work',
     order: ['work', 'risk', 'data', 'research', 'brand-team'],

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import UnifiedWorkspace from './components/agentos/UnifiedWorkspace';
 import BotWorkspace from './components/botos/BotWorkspace';
+import AvatarSheet from './components/botos/AvatarSheet';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 
@@ -267,5 +268,6 @@ export default function App() {
   const view = new URLSearchParams(window.location.search).get('view');
   if (view === 'legacy') return <LegacyApp />;
   if (view === 'v02') return <UnifiedWorkspace />;
+  if (view === 'avatars') return <AvatarSheet />;
   return <BotWorkspace />;
 }
