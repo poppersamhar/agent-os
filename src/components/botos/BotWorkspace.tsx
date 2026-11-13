@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type Dispatch, type KeyboardEvent, type ReactNode } from 'react';
-import { ArrowUp, Bell, FileText, Hexagon, House, Moon, Plus, Store, Sun } from 'lucide-react';
+import { ArrowUp, Bell, FileText, Hexagon, Moon, Plus, Search, Settings, Sun } from 'lucide-react';
 import NoticePanel from './NoticePanel';
 import { useNotices } from './notices';
 import { BOTOS_STORAGE_KEY, HOME_PAGE_ID, MARKET_PAGE_ID, agentLabel, botosReducer, composeDashboard, faceStateOf, memberBots, nowTime, pendingCount, restoreBotos, uid, type Bot, type BotMessage, type BotosAction, type BotosState, type PendingTask, type WidgetSlot } from './botModel';
 import { seedBotos } from './botosSeed';
 import BotAvatar from './BotAvatar';
+import SidebarIcon from './SidebarIcon';
 import BotDashboard from './BotDashboard';
 import NewExpertDialog from './NewExpertDialog';
 import ChoiceCard from './ChoiceCard';
@@ -29,6 +30,7 @@ import type { ExpertPublication } from './expertDefinitions';
 import './BotWorkspace.css';
 
 type Theme = 'light' | 'dark';
+const CURRENT_USER_NAME = 'Samhar';
 const THEME_KEY = 'agentos-theme-v1';
 const SIDE_KEY = 'agentos-side-v1';
 const TAB_SELECTION_KEY = 'agentos-tab-selection-v1';
@@ -141,21 +143,33 @@ function Conversation({ bot, state, recentlyDone, active, onCollapse, onAnswer, 
 
 type Tip = { text: string; top: number; left: number } | null;
 
+function messagePreview(message?: BotMessage) {
+  return message?.text.trim() || message?.attachment || message?.choices?.question || (message?.approvalId ? '审批卡' : '');
+}
+
 /**
  * 左侧侧栏里的一个智能体。
- * 展开时：头像 + 名字 + 进行中的任务数；收起时只有头像，悬停或聚焦立刻弹出名字。
- * 选中时有一圈主色描边。
+ * 展开时显示最新对话，收起时悬停或聚焦显示名称。
+ * 选中时用背景和字重区分。
  */
-function RailItem({ bot, name, label, selected, face, badge, members, expanded, onTip, onClick }: { bot: Bot; name: string; label: string; selected: boolean; face: FaceState; badge?: number; members?: Bot[]; expanded: boolean; onTip: (tip: Tip) => void; onClick: () => void }) {
+function RailItem({ bot, label, selected, face, badge, members, expanded, onTip, onClick }: { bot: Bot; label: string; selected: boolean; face: FaceState; badge?: number; members?: Bot[]; expanded: boolean; onTip: (tip: Tip) => void; onClick: () => void }) {
+  const preview = messagePreview(bot.messages.at(-1));
   const show = (el: HTMLElement) => {
     if (expanded) return;
     const r = el.getBoundingClientRect();
     onTip({ text: label, top: r.top + r.height / 2, left: r.right + 10 });
   };
-  return <button type="button" className={`bos-side-item${selected ? ' is-selected' : ''}`} aria-label={label} aria-current={selected ? 'true' : undefined} onClick={onClick}
+  return <button type="button" className={`bos-side-item bos-side-agent${selected ? ' is-selected' : ''}`} aria-label={label}
+    aria-description={expanded && preview ? preview : undefined} aria-current={selected ? 'true' : undefined} onClick={onClick}
     onMouseEnter={e => show(e.currentTarget)} onMouseLeave={() => onTip(null)} onFocus={e => show(e.currentTarget)} onBlur={() => onTip(null)}>
-    <span className="bos-side-avatar"><BotAvatar bot={bot} size={26} state={face} members={members} />{badge && !expanded ? <span className="bos-badge">{badge}</span> : null}</span>
-    {expanded ? <><span className="bos-side-name">{name}</span>{badge ? <span className="bos-side-count">{badge}</span> : null}</> : null}
+    <span className="bos-side-avatar"><BotAvatar bot={bot} size={expanded ? 38 : 26} state={face} members={members} />{badge && !expanded ? <span className="bos-badge">{badge}</span> : null}</span>
+    {expanded ? <>
+      <span className="bos-side-agent-copy">
+        <span className="bos-side-name">{bot.name}</span>
+        <small className="bos-side-preview">{preview || '暂无对话'}</small>
+      </span>
+      {badge ? <span className="bos-side-count">{badge}</span> : null}
+    </> : null}
   </button>;
 }
 
@@ -190,8 +204,29 @@ export default function BotWorkspace() {
   const [captureId, setCaptureId] = useState<string>();
   const [targetMessage, setTargetMessage] = useState<{ id: string }>();
   const [marketFocus, setMarketFocus] = useState(marketFocusFromUrl);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [noticesOpen, setNoticesOpen] = useState(false);
+  const [footerPanel, setFooterPanel] = useState<'account' | 'settings' | 'notices' | null>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  const settingsOpen = footerPanel === 'settings';
+  const closeSettings = useCallback(() => {
+    setFooterPanel(null);
+    settingsButtonRef.current?.focus();
+  }, [setFooterPanel]);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onOutsideClick = (event: PointerEvent) => {
+      if (event.target instanceof Node && !footerRef.current?.contains(event.target)) setFooterPanel(null);
+    };
+    const onEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') closeSettings();
+    };
+    document.addEventListener('pointerdown', onOutsideClick);
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('pointerdown', onOutsideClick);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [closeSettings, settingsOpen]);
   const [notices, setNotices] = useNotices();
   const unread = notices.filter(n => !n.read).length + state.approvals.filter(item => item.submittedAt !== undefined && approvalStatus(item) === 'pending').length;
   useEffect(() => {
@@ -206,11 +241,17 @@ export default function BotWorkspace() {
     try { localStorage.setItem(THEME_KEY, next); } catch { /* 仅本次生效 */ }
     return next;
   });
+  const themeLabel = theme === 'dark' ? '切换到亮色' : '切换到深色';
   const [sideOpen, setSideOpen] = useState(() => { try { return localStorage.getItem(SIDE_KEY) !== 'closed'; } catch { return true; } });
-  const toggleSide = () => setSideOpen(v => {
-    try { localStorage.setItem(SIDE_KEY, v ? 'closed' : 'open'); } catch { /* 仅本次生效 */ }
-    return !v;
-  });
+  const [agentSearchOpen, setAgentSearchOpen] = useState(false);
+  const [agentSearch, setAgentSearch] = useState('');
+  const agentSearchButton = useRef<HTMLButtonElement>(null);
+  const closeAgentSearch = () => { setAgentSearchOpen(false); setAgentSearch(''); };
+  const toggleSide = () => {
+    if (sideOpen) closeAgentSearch();
+    try { localStorage.setItem(SIDE_KEY, sideOpen ? 'closed' : 'open'); } catch { /* 仅本次生效 */ }
+    setSideOpen(!sideOpen);
+  };
   const [tip, setTip] = useState<Tip>(null);
   const railProps = { expanded: sideOpen, onTip: setTip };
   const [recentlyDone, setRecentlyDone] = useState<string[]>([]);
@@ -249,7 +290,9 @@ export default function BotWorkspace() {
     const bot = state.bots.find(item => item.id === id);
     return bot ? [bot] : [];
   }), [state.order, state.bots]);
-  const lastMessage = current?.messages.at(-1);
+  const agentSearchTerm = agentSearch.trim().toLocaleLowerCase();
+  const visibleAgents = agentSearchTerm ? agents.filter(bot => bot.name.toLocaleLowerCase().includes(agentSearchTerm)) : agents;
+  const lastMessagePreview = messagePreview(current?.messages.at(-1));
   const onHome = state.currentId === HOME_PAGE_ID;
   const onMarket = state.currentId === MARKET_PAGE_ID;
   const capturing = state.bots.find(bot => bot.id === captureId);
@@ -298,7 +341,7 @@ export default function BotWorkspace() {
     const text = (preset ?? draft).trim();
     if (!text || !current) return;
     setTargetMessage(undefined);
-    const userMessage: BotMessage = { id: uid(), author: 'user', name: 'Samhar', text, time: nowTime() };
+    const userMessage: BotMessage = { id: uid(), author: 'user', name: CURRENT_USER_NAME, text, time: nowTime() };
     setDraft(''); setChatOpen(true);
     const spec = composeDashboard(current, state.skills, state.mcps);
     if (/放到最上面|移到顶部|放在最上面|置顶/.test(text)) {
@@ -404,38 +447,67 @@ export default function BotWorkspace() {
             <ChatPanelIcon />
           </button>
         </div>
-        <nav className="bos-side-group" aria-label="页面">
-          <button type="button" className={`bos-side-item${onHome ? ' is-selected' : ''}`} aria-label="首页" aria-current={onHome ? 'page' : undefined} title={sideOpen ? undefined : '首页'} onClick={() => selectBot(HOME_PAGE_ID)}>
-            <span className="bos-side-avatar"><House size={20} strokeWidth={1.7} /></span>{sideOpen ? <span className="bos-side-name">首页</span> : null}
+        <div className="bos-side-actions">
+          {sideOpen ? <button type="button" className="bos-side-action" ref={agentSearchButton}
+            aria-label="搜索智能体" aria-expanded={agentSearchOpen} aria-controls={agentSearchOpen ? 'bos-agent-search' : undefined} title="搜索智能体"
+            onClick={() => agentSearchOpen ? closeAgentSearch() : setAgentSearchOpen(true)}>
+            <Search size={18} strokeWidth={1.7} aria-hidden="true" />
+          </button> : null}
+          <button type="button" className="bos-side-action bos-side-create" aria-label="新建智能体" title="新建智能体" onClick={() => setCreating(true)}>
+            <Plus className="bos-side-create-plus" size={22} strokeWidth={1.7} aria-hidden="true" />
           </button>
-          <button type="button" className={`bos-side-item${onMarket ? ' is-selected' : ''}`} aria-label="市场" aria-current={onMarket ? 'page' : undefined} title={sideOpen ? undefined : '市场'} onClick={() => selectBot(MARKET_PAGE_ID)}>
-            <span className="bos-side-avatar"><Store size={20} strokeWidth={1.7} /></span>{sideOpen ? <span className="bos-side-name">市场</span> : null}
+        </div>
+        {agentSearchOpen && sideOpen ? <label id="bos-agent-search" className="bos-search bos-side-search">
+          <input type="search" aria-label="按名称搜索智能体" placeholder="搜索智能体" autoFocus value={agentSearch} onChange={event => setAgentSearch(event.target.value)}
+            onKeyDown={event => {
+              if (event.key !== 'Escape' || event.nativeEvent.isComposing) return;
+              closeAgentSearch();
+              agentSearchButton.current?.focus();
+            }} />
+        </label> : null}
+        <nav className="bos-side-group" aria-label="页面">
+          <button type="button" className={`bos-side-item bos-side-page${onHome ? ' is-selected' : ''}`} aria-label="首页" aria-current={onHome ? 'page' : undefined} title={sideOpen ? undefined : '首页'} onClick={() => selectBot(HOME_PAGE_ID)}>
+            <span className="bos-side-avatar"><SidebarIcon kind="home" /></span>{sideOpen ? <span className="bos-side-name">首页</span> : null}
+          </button>
+          <button type="button" className={`bos-side-item bos-side-page${onMarket ? ' is-selected' : ''}`} aria-label="市场" aria-current={onMarket ? 'page' : undefined} title={sideOpen ? undefined : '市场'} onClick={() => selectBot(MARKET_PAGE_ID)}>
+            <span className="bos-side-avatar"><SidebarIcon kind="market" /></span>{sideOpen ? <span className="bos-side-name">市场</span> : null}
           </button>
         </nav>
-        <button type="button" className="bos-side-new" aria-label="新建智能体" title={sideOpen ? undefined : '新建智能体'} onClick={() => setCreating(true)}><span className="bos-add" aria-hidden="true"><Plus size={15} strokeWidth={2.2} /></span>{sideOpen ? <span className="bos-side-name">新建智能体</span> : null}</button>
         <div className="bos-side-list">
-          {agents.map(b => {
+          {agentSearchTerm && !visibleAgents.length ? <p className="bos-side-search-empty" role="status">没有匹配的智能体</p> : null}
+          {visibleAgents.map(b => {
             const n = pendingCount(state, b.id);
             const face = faceStateOf(state, b, recentlyDone);
             const status = { working: `，${n} 项进行中`, done: '，刚完成', needs: '，需要你处理', idle: '' }[face];
-            return <RailItem key={b.id} bot={b} name={b.name} label={`${b.name}（${agentLabel(b)}）${status}`} selected={current?.id === b.id} face={face} badge={n} members={memberBots(state, b)} {...railProps} onClick={() => selectBot(b.id)} />;
+            return <RailItem key={b.id} bot={b} label={`${b.name}（${agentLabel(b)}）${status}`} selected={current?.id === b.id} face={face} badge={n} members={memberBots(state, b)} {...railProps} onClick={() => selectBot(b.id)} />;
           })}
         </div>
       </div>
-      <div className="bos-side-bottom">
-        <button type="button" className="bos-side-me" aria-label="我的" title={sideOpen ? undefined : '我的'} aria-expanded={accountOpen} onClick={() => { setAccountOpen(v => !v); setNoticesOpen(false); }}><span className="bos-me" aria-hidden="true">S</span>{sideOpen ? <span className="bos-side-name">我的</span> : null}</button>
-        <button type="button" className="bos-rail-button" aria-label={`通知${unread ? `，${unread} 条未读` : ''}`} aria-expanded={noticesOpen} title="通知" onClick={() => { setNoticesOpen(v => !v); setAccountOpen(false); }}>
-          <Bell size={13} />{unread ? <span className="bos-rail-dot" aria-hidden="true" /> : null}
+      <div className="bos-side-bottom" ref={footerRef}>
+        <button type="button" className="bos-side-settings" ref={settingsButtonRef} aria-label="设置"
+          aria-description={unread ? `有 ${unread} 条未读通知` : undefined} aria-expanded={settingsOpen} title="设置"
+          onClick={() => setFooterPanel(panel => panel === 'settings' ? null : 'settings')}>
+          <Settings size={18} strokeWidth={1.7} aria-hidden="true" />{unread ? <span className="bos-rail-dot" aria-hidden="true" /> : null}
         </button>
-        <button type="button" className="bos-rail-button" onClick={toggleTheme} aria-label={theme === 'dark' ? '切换到亮色' : '切换到深色'} title={theme === 'dark' ? '切换到亮色' : '切换到深色'}>
-          {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+        {settingsOpen ? <div className="bos-popover bos-settings-popover" role="group" aria-label="设置选项">
+          <button type="button" onClick={() => setFooterPanel('notices')}>
+            <Bell size={15} aria-hidden="true" /><span>通知</span>{unread ? <small>{unread} 条未读</small> : null}
+          </button>
+          <button type="button" onClick={toggleTheme}>
+            {theme === 'dark' ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}<span>{themeLabel}</span>
+          </button>
+        </div> : null}
+        <button type="button" className="bos-side-me" aria-label={`${CURRENT_USER_NAME} 账号菜单`} title={sideOpen ? undefined : CURRENT_USER_NAME}
+          aria-expanded={footerPanel === 'account'} onClick={() => setFooterPanel(panel => panel === 'account' ? null : 'account')}>
+          <span className="bos-me" aria-hidden="true">{CURRENT_USER_NAME[0]}</span>
+          {sideOpen ? <span className="bos-side-name">{CURRENT_USER_NAME}</span> : null}
         </button>
-        {accountOpen ? <div className="bos-popover" role="menu">
-          <strong>Samhar</strong><p>交互原型 · 数据保存在本地，智能体回复为模拟。</p>
-          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'reset', state: { ...seedBotos(), audit: state.audit } }); setAccountOpen(false); }}>重置演示数据</button>
+        {footerPanel === 'account' ? <div className="bos-popover" role="menu">
+          <strong>{CURRENT_USER_NAME}</strong><p>交互原型 · 数据保存在本地，智能体回复为模拟。</p>
+          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'reset', state: { ...seedBotos(), audit: state.audit } }); setFooterPanel(null); }}>重置演示数据</button>
           <a role="menuitem" href="?view=avatars">智能体头像样稿</a>
         </div> : null}
-        {noticesOpen ? <NoticePanel notices={notices} approvals={state.approvals} onDecide={onDecide} onChange={setNotices} onClose={() => setNoticesOpen(false)} /> : null}
+        {footerPanel === 'notices' ? <NoticePanel notices={notices} approvals={state.approvals} onDecide={onDecide} onChange={setNotices} onClose={closeSettings} /> : null}
       </div>
     </aside>
     {tip ? <div className="bos-side-tip" role="tooltip" style={{ top: tip.top, left: tip.left }}>{tip.text}</div> : null}
@@ -485,7 +557,7 @@ export default function BotWorkspace() {
                 onCapture={() => openCapture(current.id)} onApplyDefinition={next => dispatch({ type: 'reset', state: next })} />
       </div>
       {!chatOpen ? <button type="button" className="bos-collapsed-chat" onClick={() => setChatOpen(true)} aria-label={`展开 ${current.name} 的对话`}>
-        <ChatPanelIcon /><span><strong>{current.name}</strong>{lastMessage ? <small>{(lastMessage.text || (lastMessage.approvalId ? '审批卡' : ''))}</small> : null}</span>
+        <ChatPanelIcon /><span><strong>{current.name}</strong>{lastMessagePreview ? <small>{lastMessagePreview}</small> : null}</span>
       </button> : null}
     </main> : <main className="bos-page" key={onMarket ? MARKET_PAGE_ID : HOME_PAGE_ID}>
       {onMarket
