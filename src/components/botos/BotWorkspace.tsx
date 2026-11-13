@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type Dispatch, type KeyboardEvent } from 'react';
-import { ArrowUp, Bell, FileText, Hexagon, Moon, PanelLeftClose, PanelLeftOpen, Plus, Store, Sun } from 'lucide-react';
+import { ArrowUp, Bell, FileText, Hexagon, Moon, Plus, Store, Sun } from 'lucide-react';
 import NoticePanel from './NoticePanel';
 import { useNotices } from './notices';
 import { BOTOS_STORAGE_KEY, MAIN_BOT_ID, SYSTEM_AGENTS, agentLabel, botosReducer, isAgent, faceStateOf, memberBots, nowTime, pendingCount, restoreBotos, uid, type Bot, type BotMessage, type BotosAction, type BotosState, type PendingTask } from './botModel';
@@ -13,6 +13,7 @@ import type { FaceState } from './botFaces';
 import { draftFace, type BotDraft } from './botDraft';
 import { BotHub, McpHub, SkillHub } from './HubPages';
 import { systemReply } from './systemAgents';
+import { useChatSplit } from './useChatSplit';
 import './BotWorkspace.css';
 
 type Theme = 'light' | 'dark';
@@ -76,14 +77,23 @@ function TaskRunner({ task, state, dispatch, onDone }: { task: PendingTask; stat
   return null;
 }
 
-function Conversation({ bot, state, recentlyDone, onCollapse, onAnswer, onOther }: { bot: Bot; state: BotosState; recentlyDone: string[]; onCollapse: () => void; onAnswer: (messageId: string, answer: string) => void; onOther: () => void }) {
+function ChatPanelIcon() {
+  return <svg className="bos-chat-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <rect x="2" y="3" width="20" height="18" rx="4.5" />
+    <path d="M6.5 7.5v9" />
+  </svg>;
+}
+
+function Conversation({ bot, state, recentlyDone, active, onCollapse, onAnswer, onOther }: { bot: Bot; state: BotosState; recentlyDone: string[]; active: boolean; onCollapse: () => void; onAnswer: (messageId: string, answer: string) => void; onOther: () => void }) {
   const end = useRef<HTMLDivElement>(null);
   const working = pendingCount(state, bot.id) > 0;
-  useEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [bot.id, bot.messages.length, working]);
+  useEffect(() => { if (active) end.current?.scrollIntoView({ block: 'end' }); }, [bot.id, bot.messages.length, working, active]);
   return <section className="bos-chat" aria-label={`${bot.name} 对话`}>
     <header className="bos-chat-head">
-      <span className="bos-row-name"><BotAvatar bot={bot} size={24} state={faceStateOf(state, bot, recentlyDone)} members={memberBots(state, bot)} />{bot.name}</span>
-      <button type="button" className="bos-icon bos-icon--dark" aria-label="收起对话" title="收起对话" onClick={onCollapse}><PanelLeftClose size={15} /></button>
+      <span className="bos-row-name"><BotAvatar bot={bot} size={24} state={faceStateOf(state, bot, recentlyDone)} members={memberBots(state, bot)} /><span className="bos-chat-title">{bot.name}</span></span>
+      <button type="button" className="bos-icon bos-icon--dark" aria-label="收起对话" title="收起对话" onClick={onCollapse}>
+        <ChatPanelIcon />
+      </button>
     </header>
     <div className="bos-chat-scroll">
       {bot.messages.length ? bot.messages.map(m => <article key={m.id} className={`bos-msg bos-msg--${m.author}`}>
@@ -112,7 +122,7 @@ function SysButton({ bot, label, selected, state, onClick }: { bot: Bot; label: 
 export default function BotWorkspace() {
   const [state, dispatch] = useReducer(botosReducer, null, () => { try { return restoreBotos(localStorage.getItem(BOTOS_STORAGE_KEY), seedBotos); } catch { return seedBotos(); } });
   const [draft, setDraft] = useState('');
-  const [chatOpen, setChatOpen] = useState(true);
+  const { panelRef, paneRef, separatorRef, chatOpen, resizing, settling, setChatOpen, separatorProps } = useChatSplit();
   const [creating, setCreating] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [noticesOpen, setNoticesOpen] = useState(false);
@@ -204,15 +214,18 @@ export default function BotWorkspace() {
         <a role="menuitem" className="bos-menu-market" href="?view=market"><Store size={15} /><span><strong>市场</strong><small>Agent Market · 专家、专家团、技能、连接器</small></span></a>
         <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'reset', state: seedBotos() }); setAccountOpen(false); }}>重置演示数据</button>
         <a role="menuitem" href="?view=avatars">智能体头像样稿</a>
-        <a role="menuitem" href="?view=v02">查看 v0.2 工作空间</a>
       </div> : null}
       {noticesOpen ? <NoticePanel notices={notices} onChange={setNotices} onClose={() => setNoticesOpen(false)} /> : null}
     </aside>
 
-    <main className={`bos-panel${chatOpen ? '' : ' is-wide'}`}>
-      {chatOpen ? <Conversation bot={current} state={state} recentlyDone={recentlyDone} onCollapse={() => setChatOpen(false)}
-        onAnswer={(messageId, answer) => { dispatch({ type: 'answer', botId: current.id, messageId, answer }); send(answer); }}
-        onOther={() => inputRef.current?.focus()} /> : null}
+    <main ref={panelRef} className={`bos-panel${chatOpen ? '' : ' is-wide'}${resizing ? ' is-resizing' : ''}${settling ? ' is-settling' : ''}`}>
+      <div ref={paneRef} id="bos-conversation" className="bos-chat-pane" inert={!chatOpen && !resizing} aria-hidden={!chatOpen && !resizing}>
+        <Conversation bot={current} state={state} recentlyDone={recentlyDone} active={chatOpen || resizing} onCollapse={() => setChatOpen(false)}
+          onAnswer={(messageId, answer) => { dispatch({ type: 'answer', botId: current.id, messageId, answer }); send(answer); }}
+          onOther={() => inputRef.current?.focus()} />
+      </div>
+      <div ref={separatorRef} className="bos-chat-resizer" role="separator" tabIndex={0} aria-label="调整对话宽度" aria-orientation="vertical"
+        aria-controls="bos-conversation" aria-valuemin={0} aria-valuemax={50} {...separatorProps} />
       <div className="bos-panel-right">
         {/* 管理智能体的右侧面板就是对应的管理页 */}
         {sysRole === 'experts' ? <BotHub {...hubProps} />
@@ -247,7 +260,7 @@ export default function BotWorkspace() {
 
     <footer className="bos-inputrow">
       {!chatOpen ? <button type="button" className="bos-collapsed-chat" onClick={() => setChatOpen(true)} aria-label={`展开 ${current.name} 的对话`}>
-        <PanelLeftOpen size={14} /><span><strong>{current.name}</strong>{lastMessage ? <small>{lastMessage.text}</small> : null}</span>
+        <ChatPanelIcon /><span><strong>{current.name}</strong>{lastMessage ? <small>{lastMessage.text}</small> : null}</span>
       </button> : null}
       <SysButton bot={mainBot} label="首页" selected={onMain} state={faceStateOf(state, mainBot, recentlyDone)} onClick={() => selectBot(MAIN_BOT_ID)} />
       <div className="bos-input">

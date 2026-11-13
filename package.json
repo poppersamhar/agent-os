@@ -1,25 +1,20 @@
 {
   "name": "agent-os",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "lint:workspace": "eslint src/components/botos src/components/agentos src/data/agentosArtifacts.ts",
-    "test": "node tests/project-task-check.mjs && node tests/project-board-check.mjs && node tests/demo-seed-check.mjs && node tests/botos-check.mjs && node tests/market-check.mjs"
+    "lint:workspace": "eslint src",
+    "test": "node tests/botos-check.mjs && node tests/market-check.mjs"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.0",
-    "@types/three": "^0.184.0",
-    "jszip": "^3.10.1",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "three": "^0.184.0"
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
