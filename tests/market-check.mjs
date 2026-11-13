@@ -11,10 +11,11 @@ registerHooks({
   },
 });
 
-const { marketCatalog, findItem, installItem, recruitItem, definitionUpdate, applyDefinitionUpdate, isInstalled, itemDeps, teamMembers, mcpConfig, pluginPackage, publishedDefinitions, versionHistory } = await import(new URL('../src/components/botos/marketCatalog.ts', import.meta.url));
+const { marketCatalog, catalogFor, findItem, installItem, recruitItem, definitionUpdate, applyDefinitionUpdate, isInstalled, itemDeps, teamMembers, mcpConfig, pluginPackage, publishedDefinitions, versionHistory, marketCapabilityIssue, marketItemAgents, marketScenes } = await import(new URL('../src/components/botos/marketCatalog.ts', import.meta.url));
 const { seedBotos } = await import(new URL('../src/components/botos/botosSeed.ts', import.meta.url));
 const { availableDefinitions, createPublication, sensitivePromptFields } = await import(new URL('../src/components/botos/expertDefinitions.ts', import.meta.url));
-const { MAIN_BOT_ID, composeDashboard } = await import(new URL('../src/components/botos/botModel.ts', import.meta.url));
+const { HOME_PAGE_ID, MARKET_PAGE_ID, composeDashboard } = await import(new URL('../src/components/botos/botModel.ts', import.meta.url));
+const { makeSkill, makeConnector, parseSkillRequest, parseConnectorRequest, validConnectorEndpoint } = await import(new URL('../src/components/botos/capabilityDrafts.ts', import.meta.url));
 
 // 目录完整：id 唯一；专家 / 专家团引用的 Skill、MCP、成员都存在
 assert.equal(new Set(marketCatalog.map(i => i.id)).size, marketCatalog.length, 'ids are unique');
@@ -57,7 +58,7 @@ assert.ok(!group.memberIds.includes(bot.id), 'creates a new member without shari
 assert.equal(s2.bots.filter(b => b.sourceId === 'expert:contract').length, 2);
 assert.ok(s2.bots.some(b => b.sourceId === 'expert:minutes'), 'adds missing member');
 assert.ok(s2.mcps.some(m => m.id === 'dingtalk'), 'member deps installed');
-assert.ok(!s2.order.includes(MAIN_BOT_ID));
+assert.ok(!s2.order.includes(HOME_PAGE_ID) && !s2.order.includes(MARKET_PAGE_ID));
 const recruitedToGroup = recruitItem(s2, contract, { groupId: group.id, name: '群里的合同助手' });
 assert.equal(recruitedToGroup.currentId, group.id);
 const member = recruitedToGroup.bots.find(b => b.name === '群里的合同助手');
@@ -122,5 +123,31 @@ assert.equal(updated.sourceVersion, update.version);
 assert.deepEqual(updated.memory, research.memory);
 assert.deepEqual(updated.messages, research.messages);
 assert.deepEqual(updated.mcpIds, research.mcpIds);
+
+// 市场以工作区的能力记录为准，临时助手只创建能力。
+const skill = makeSkill(parseSkillRequest('新建「投诉分析」，整理客服工单'), 'complaints');
+const connectorDraft = parseConnectorRequest('接入「工单系统」，端点 mcp://tickets.internal');
+const connector = makeConnector({ ...connectorDraft, tools: ['检索工单', '检索工单'] }, 'tickets');
+assert.equal(skill.name, '投诉分析');
+assert.equal(parseSkillRequest('新建「市场验收技能」，整理模拟反馈').name, '市场验收技能');
+assert.equal(skill.description, '整理客服工单');
+assert.equal(connector.name, '工单系统');
+assert.equal(connector.endpoint, 'mcp://tickets.internal');
+assert.deepEqual(connector.tools, ['检索工单']);
+assert.ok(validConnectorEndpoint('https://example.com/mcp?channel=tickets'));
+assert.ok(!validConnectorEndpoint('https://example.com/mcp?api_key=secret'));
+assert.ok(!validConnectorEndpoint('https://user:secret@example.com/mcp'));
+const custom = botosReducer(botosReducer(base, { type: 'create-skill', skill }), { type: 'create-mcp', mcp: connector });
+assert.equal(custom.bots.length, base.bots.length);
+assert.equal(catalogFor(custom).find(item => item.id === `connector:${connector.id}`).source, 'mine');
+assert.equal(findItem(`skill:${skill.id}`, custom).source, 'mine');
+assert.equal(marketCapabilityIssue(findItem('connector:feishu', custom)), '凭证即将过期');
+assert.equal(marketCapabilityIssue(findItem('skill:inspect', custom)), '失败率偏高');
+assert.ok(marketScenes(contract).includes('法务'));
+const liveConnector = findItem('connector:feishu', custom);
+assert.ok(marketItemAgents(custom, liveConnector).some(bot => bot.id === 'work'));
+const revoked = botosReducer(custom, { type: 'revoke-capability', kind: 'mcp', id: liveConnector.mcp.id, botId: 'work' });
+assert.ok(!marketItemAgents(revoked, liveConnector).some(bot => bot.id === 'work'));
+assert.equal(marketCapabilityIssue(findItem('connector:feishu', botosReducer(custom, { type: 'toggle-mcp', id: liveConnector.mcp.id }))), '已停用');
 
 console.log('market checks passed');

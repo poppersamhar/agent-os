@@ -1,28 +1,23 @@
 import { useMemo, useState } from 'react';
 import { ArrowRight, BadgeCheck, Sprout, CircleCheck, CircleDot, GitPullRequest, MessageSquare, TriangleAlert } from 'lucide-react';
-import { HISTORY_DAYS, isAgent, composeDashboard, faceStateOf, memberBots, pendingCount, seeded, waitingFor, type Bot, type BotosState, type WaitingItem, type WidgetSlot } from './botModel';
+import { HISTORY_DAYS, composeDashboard, faceStateOf, memberBots, pendingCount, seeded, waitingFor, type Bot, type BotosState, type WaitingItem, type WidgetSlot } from './botModel';
 import BotAvatar from './BotAvatar';
 import type { FaceState } from './botFaces';
-import type { ApprovalDecision } from './governance';
 import { AuditWidget, PersonnelWidget } from './PersonnelWidget';
 import { type PersonnelAction, type PersonnelInput } from './personnel';
 import { ActionTableWidget, ArtifactPreviewWidget, RecentArtifactsWidget, RoutinesWidget, WorkspaceWidget } from './AgentWidgets';
 import { workspaceFiles, type TableAction, type WorkspaceFile } from './workspaceWidgets';
-import { ApprovalsWidget, CapabilitiesWidget, CapabilityHealth, SensitiveOperations } from './GovernanceWidgets';
-import CaptureExpertDialog from './CaptureExpertDialog';
-import type { ExpertPublication } from './expertDefinitions';
+import { CapabilitiesWidget } from './GovernanceWidgets';
+import { maturityFor } from './botMaturity';
 import { applyDefinitionUpdate, definitionUpdate } from './marketCatalog';
 
 // 固定的 Widget 组件库：Spec 只声明「放什么」，这里负责「怎么画」。
 
-const whenLabel = { today: '今天', week: '本周', later: '稍后' } as const;
-
 interface DashboardActions {
-  onSelectBot: (id: string) => void;
+  onSelectBot: (id: string, messageId?: string) => void;
   onAsk: (slot: WidgetSlot) => void;
   onRefresh: (slot: WidgetSlot) => void;
   onDashboardChange: (undo: boolean) => void;
-  onDecide: (id: string, decision: ApprovalDecision) => void;
   onRequestConnector: (id: string) => void;
   onPersonnel: (slot: WidgetSlot, mode: PersonnelAction, input: PersonnelInput) => void;
   onReveal: (id: string) => void;
@@ -30,7 +25,7 @@ interface DashboardActions {
   onRoutineRun: (id: string) => void;
   onTableAction: (source: WidgetSlot['source'], id: string, action: TableAction) => void;
   onGroupRecruit: () => void;
-  onCapture: (publication: ExpertPublication, prompt: string) => void;
+  onCapture: () => void;
   onApplyDefinition: (next: BotosState) => void;
 }
 
@@ -41,7 +36,6 @@ interface Ctx extends DashboardActions {
 }
 
 function scopeBots(state: BotosState, bot: Bot): Bot[] {
-  if (bot.kind === 'main') return state.bots.filter(isAgent);
   if (bot.kind === 'group') return [bot, ...state.bots.filter(b => bot.memberIds.includes(b.id))];
   return [bot];
 }
@@ -53,39 +47,18 @@ function sumHistory(bots: Bot[]): [number, number][] {
   }, [0, 0]));
 }
 
-function waitingItems({ scope }: Ctx): WaitingItem[] {
-  return scope.flatMap(b => waitingFor(b.id));
-}
-
 function Waiting(ctx: Ctx) {
-  const items = waitingItems(ctx);
-  const counts = (['today', 'week', 'later'] as const).map(when => items.filter(i => i.when === when).length);
-  const total = items.length;
-  const r = 34, c = 2 * Math.PI * r;
-  let offset = 0;
+  const items: WaitingItem[] = ctx.scope.flatMap(waitingFor);
+  const first = items[0];
+  if (!first) return <p className="bos-empty-note">暂时没有需要你处理的事</p>;
   return <div className="bos-waiting">
-    <div className="bos-waiting-body">
-      <svg viewBox="0 0 84 84" className="bos-donut" aria-hidden="true">
-        <circle cx="42" cy="42" r={r} fill="none" className="bos-donut-track" strokeWidth="9" />
-        {total ? counts.map((n, i) => {
-          const len = (n / total) * c;
-          const el = <circle key={i} cx="42" cy="42" r={r} fill="none" className={`bos-donut-seg--${(['today', 'week', 'later'] as const)[i]}`} strokeWidth="9" strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-offset} transform="rotate(-90 42 42)" />;
-          offset += len;
-          return el;
-        }) : null}
-        <text x="42" y="44" textAnchor="middle" className="bos-donut-num">{total}</text>
-        <text x="42" y="57" textAnchor="middle" className="bos-donut-label">件待处理</text>
-      </svg>
-      <ul className="bos-legend">{(['today', 'week', 'later'] as const).map((when, i) => <li key={when}><i className={`is-${when}`} />{whenLabel[when]}<b>{counts[i]}</b></li>)}</ul>
-    </div>
-    {total
-      ? <button type="button" className="bos-primary-action" onClick={() => ctx.onSelectBot(items[0].botId)}>处理这 {total} 件 <ArrowRight size={14} /></button>
-      : <p className="bos-empty-note">暂时没有需要你处理的事</p>}
+    <p className="bos-big"><strong>{items.length}</strong><span>件待处理</span></p>
+    <button type="button" className="bos-primary-action" onClick={() => ctx.onSelectBot(first.botId, first.messageId)}>去处理 <ArrowRight size={14} /></button>
   </div>;
 }
 
-function Agents(ctx: Ctx & { members?: boolean }) {
-  const bots = ctx.members ? ctx.state.bots.filter(b => ctx.bot.memberIds.includes(b.id)) : ctx.scope;
+function Agents(ctx: Ctx) {
+  const bots = memberBots(ctx.state, ctx.bot);
   return <div className="bos-agents">
     <div className="bos-agents-grid">{bots.map(b => {
       const face = faceStateOf(ctx.state, b, ctx.recentlyDone);
@@ -95,22 +68,6 @@ function Agents(ctx: Ctx & { members?: boolean }) {
         <span>{b.name}</span>
         <small>{label}</small>
       </button>;
-    })}</div>
-  </div>;
-}
-
-const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
-function Done(ctx: Ctx) {
-  const days = sumHistory(ctx.scope).slice(-7).map(d => d[0]);
-  const max = Math.max(...days, 1);
-  const today = days[days.length - 1];
-  const best = today >= max;
-  const start = (new Date().getDay() + 6) % 7; // 今天是周几（周一=0）
-  return <div className="bos-done">
-    <p className="bos-big"><strong>{today}</strong><span>今天完成{best ? ' · 本周最多' : ''}</span></p>
-    <div className="bos-bars">{days.map((n, i) => {
-      const label = weekdays[(start - 6 + i + 14) % 7];
-      return <div key={i} className={i === days.length - 1 ? 'is-today' : ''}><span style={{ height: `${Math.max(6, (n / max) * 100)}%` }} /><small>{i === days.length - 1 ? '今天' : `周${label}`}</small></div>;
     })}</div>
   </div>;
 }
@@ -209,9 +166,7 @@ function Metrics({ slot }: { slot: WidgetSlot }) {
 function Widget({ slot, ctx }: { slot: WidgetSlot; ctx: Ctx }) {
   switch (slot.kind) {
     case 'waiting': return <Waiting {...ctx} />;
-    case 'agents': return <Agents {...ctx} />;
-    case 'members': return <><Agents {...ctx} members /><button type="button" className="bos-secondary bos-group-recruit" onClick={ctx.onGroupRecruit}>招募专家</button></>;
-    case 'done': return <Done {...ctx} />;
+    case 'members': return <><Agents {...ctx} /><button type="button" className="bos-secondary bos-group-recruit" onClick={ctx.onGroupRecruit}>招募专家</button></>;
     case 'runs': return <Runs {...ctx} />;
     case 'artifacts': return <RecentArtifactsWidget files={ctx.scope.flatMap(workspaceFiles)} onPreview={ctx.onPreview} />;
     case 'artifact-preview': return <ArtifactPreviewWidget key={ctx.preview?.id} file={ctx.preview} />;
@@ -227,9 +182,6 @@ function Widget({ slot, ctx }: { slot: WidgetSlot; ctx: Ctx }) {
     }
     case 'audit': return <AuditWidget records={ctx.state.audit.filter(record => record.botId === ctx.bot.id && ['人员查询', '异常分析', '查看完整信息'].includes(record.action))} />;
     case 'capabilities': return <CapabilitiesWidget bot={ctx.bot} state={ctx.state} onRequest={ctx.onRequestConnector} />;
-    case 'approvals': return <ApprovalsWidget state={ctx.state} onDecide={ctx.onDecide} />;
-    case 'health': return <CapabilityHealth state={ctx.state} />;
-    case 'sensitive-operations': return <SensitiveOperations state={ctx.state} />;
     case 'feed': return <Feed />;
     case 'repo': return <Repo />;
     case 'sources': return <Sources />;
@@ -266,31 +218,27 @@ function WidgetCard({ slot, ctx }: { slot: WidgetSlot; ctx: Ctx }) {
 }
 
 export default function BotDashboard({ state, bot, recentlyDone = [], faceState = 'idle', ...actions }: DashboardActions & { state: BotosState; bot: Bot; recentlyDone?: string[]; faceState?: FaceState }) {
-  const [captureOpen, setCaptureOpen] = useState(false);
   const [preview, setPreview] = useState<WorkspaceFile>();
   const spec = useMemo(() => composeDashboard(bot, state.skills, state.mcps), [bot, state.skills, state.mcps]);
   const publishing = state.expertPublications?.some(item => item.botId === bot.id && item.status === 'pending');
-  const update = isAgent(bot) ? definitionUpdate(state, bot) : undefined;
+  const update = definitionUpdate(state, bot);
+  const canCapture = bot.matured || maturityFor(bot).eligible;
   const ctx: Ctx = { ...actions, state, bot, scope: scopeBots(state, bot), recentlyDone, preview, onPreview: file => {
     setPreview(file);
     document.getElementById('widget-artifact-preview')?.scrollIntoView({ block: 'nearest' });
   } };
   const working = ctx.scope.filter(b => pendingCount(state, b.id) > 0).length;
-  const waiting = waitingItems(ctx).length;
-  const summary = bot.kind === 'main'
-    ? `${waiting} 件事等你处理，${working} 个智能体正在工作。`
-    : spec.headline.subtitle;
   return <section className="bos-dashboard" aria-label={`${bot.name} 工作台`}>
     <header className="bos-dash-head">
       {/* 非首页：面板左上角就是这个智能体的头像，充当页面 Logo */}
-      {bot.kind === 'main' ? null : <BotAvatar bot={bot} size={40} state={faceState} members={memberBots(state, bot)} />}
+      <BotAvatar bot={bot} size={40} state={faceState} members={memberBots(state, bot)} />
       <div>
         <h1>{spec.headline.title}{working ? <span className="bos-live"><i />工作中</span> : null}</h1>
-        <p>{summary}</p>
+        <p>{spec.headline.subtitle}</p>
       </div>
-      {isAgent(bot) ? <div className="bos-dash-capture">
+      {canCapture ? <div className="bos-dash-capture">
         {bot.matured ? <span className="bos-matured"><BadgeCheck size={14} />{bot.kind === 'group' ? '专家团' : '专家'}</span> : null}
-        <button type="button" className="bos-secondary" disabled={publishing} onClick={() => setCaptureOpen(true)}><Sprout size={14} />
+        <button type="button" className="bos-secondary" disabled={publishing} onClick={actions.onCapture}><Sprout size={14} />
           {publishing ? '发布审批中' : bot.matured ? '沉淀新版本' : `沉淀为${bot.kind === 'group' ? '专家团' : '专家'}`}
         </button>
       </div> : null}
@@ -304,9 +252,5 @@ export default function BotDashboard({ state, bot, recentlyDone = [], faceState 
       <button type="button" className="bos-secondary" onClick={() => actions.onApplyDefinition(applyDefinitionUpdate(state, bot, update))}>更新定义</button>
     </div> : null}
     <div className="bos-dash-grid">{spec.widgets.map(slot => <WidgetCard key={slot.id} slot={slot} ctx={ctx} />)}</div>
-    {captureOpen ? <CaptureExpertDialog state={state} bot={bot} panelWidgets={spec.widgets} onClose={() => setCaptureOpen(false)} onSave={(publication, prompt) => {
-      actions.onCapture(publication, prompt);
-      setCaptureOpen(false);
-    }} /> : null}
   </section>;
 }

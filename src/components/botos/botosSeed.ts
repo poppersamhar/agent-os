@@ -1,4 +1,4 @@
-import { MAIN_BOT_ID, SYSTEM_AGENTS, assignFaces, type SystemRole, seedHistory, type Bot, type BotMessage, type BotosState, type Mcp, type Skill } from './botModel';
+import { HOME_PAGE_ID, assignFaces, seedHistory, type Bot, type BotMessage, type BotosState, type Mcp, type Skill } from './botModel';
 import { inferDashboardTemplate } from './dashboardTemplates';
 import { seedRoutines, seedWorkspaceFiles } from './workspaceWidgets';
 
@@ -45,21 +45,9 @@ const bot = (b: Omit<SeedBot, 'history' | 'memberIds' | 'createdAt'> & { memberI
   dashboardUpdatedAt: Date.now(), dashboardTemplate: inferDashboardTemplate(b.name, b.prompt, b.mcpIds), routines: seedRoutines(b.id), files: seedWorkspaceFiles(b.id), ...b,
 });
 
-const systemGreeting: Record<SystemRole, { text: string; options: string[] }> = {
-  experts: { text: '我负责智能体、专家和专家团。可以帮你从市场里挑专家、新建智能体，或把用得好的智能体沉淀为专家。', options: ['推荐适合我的专家', '新建一个智能体', '把一个智能体沉淀为专家'] },
-  skills: { text: '我负责技能。可以帮你新建、修改技能，也能看看哪些技能需要优化。', options: ['新建一个技能', '看看哪些技能失败率高', '把一段做法沉淀成技能'] },
-  connectors: { text: '我负责连接器。可以帮你接入企业系统、检查连接器和凭证。', options: ['接入一个新系统', '查看哪些连接器已停用', '检查凭证配置'] },
-};
-
 export function seedBotos(): BotosState {
   // 头像按名称自动分配（与新建智能体的规则相同）。
   const bots: Bot[] = assignFaces([
-    bot({
-      id: MAIN_BOT_ID, name: '企业效能管理智能体', kind: 'main', model: '系统默认', skillIds: [], mcpIds: [],
-      prompt: '统一管理全部智能体、技能与连接器，汇总进展与待处理事项。',
-      memory: [{ id: 'm-main-1', text: 'Samhar 每周一上午查看整体进展。', scope: 'personal', createdAt: '10-20' }],
-      messages: [msg('bot', '企业效能管理智能体', '早上好。今天有 2 件事等你确认，「数据巡检专家」正在处理一次失败的检查。可以直接问我任何专家、技能或连接器的情况。', '09:02')],
-    }),
     bot({
       id: 'work', name: '日常办公', kind: 'bot', model: 'Claude Sonnet 4.6', skillIds: ['weekly', 'slides', 'brand'], mcpIds: ['feishu'],
       prompt: '日常办公智能体。整理飞书群聊里的需求，生成周报、网页与演示稿。',
@@ -72,6 +60,7 @@ export function seedBotos(): BotosState {
         msg('bot', '日常办公', '已完成品牌产品介绍网页，结构为：主张 → 三项价值 → 案例 → 联系方式。', '10:15', '品牌产品介绍.html'),
         msg('source', '飞书群聊', '@日常办公把上周的项目总结整理一下发群里', '14:20'),
         msg('bot', '日常办公', '项目总结已整理并发送到「品牌升级」群。', '14:24', '项目总结示例.md'),
+        { ...msg('bot', '日常办公', '本周周报已整理成稿。请确认是否发到「品牌升级」群。', '15:10'), needsUser: true },
       ],
     }),
     bot({
@@ -80,7 +69,7 @@ export function seedBotos(): BotosState {
       memory: [{ id: 'm-risk-1', text: '华东二号供应商交付节点需每周二核对。', scope: 'team', createdAt: '10-15' }],
       messages: [
         msg('user', 'Samhar', '本周有哪些需要关注的供应链风险？', '09:40'),
-        msg('bot', '风险跟进专家', '有两项需要你确认：华东二号供应商交付延期 5 天；一项物料单价上涨 12%。详情见右侧风险事项。', '09:43', '供应链风险评估报告.md'),
+        { ...msg('bot', '风险跟进专家', '有两项需要你确认：华东二号供应商交付延期 5 天；一项物料单价上涨 12%。详情见右侧风险事项。', '09:43', '供应链风险评估报告.md'), needsUser: true },
       ],
     }),
     bot({
@@ -89,6 +78,7 @@ export function seedBotos(): BotosState {
       memory: [{ id: 'm-data-1', text: '订单表的 region 字段允许为空，不计入异常。', scope: 'team', createdAt: '10-30' }],
       messages: [
         msg('bot', '数据巡检专家', '今日巡检完成：48 张表，3 项异常。其中 dw_orders.amount 有 0.4% 负值，已定位到上游退款同步。', '08:00', '数据巡检专家报告.md'),
+        { ...msg('bot', '数据巡检专家', '请确认是否回滚订单表中的异常数据。', '08:05'), needsUser: true },
       ],
     }),
     bot({
@@ -104,6 +94,7 @@ export function seedBotos(): BotosState {
       id: 'personnel', name: '人员查询', kind: 'bot', matured: false, sourceId: 'expert:personnel', model: '系统默认', skillIds: [], mcpIds: ['personnel'], requiredMcpIds: ['personnel'],
       prompt: '通过人员信息库查询模拟人员记录。先填写事由，敏感字段默认脱敏，完整信息须审批。',
       memory: [], messages: [msg('bot', '人员查询', '可以在右侧查询模拟人员记录，或把查询结果交给我分析。每次操作都会写进查询记录。', '09:00')],
+      scale: 0.1,
     }),
     bot({
       id: 'brand-team', name: '品牌专家团', kind: 'group', matured: true, model: '系统默认', skillIds: ['brand', 'slides'], mcpIds: [], memberIds: ['research', 'work'],
@@ -115,14 +106,9 @@ export function seedBotos(): BotosState {
         msg('member', '日常办公', '演示稿初版已完成，共 3 页。', '11-07', '品牌升级提案.pptx'),
       ],
     }),
-    // 系统管理智能体：左边对话，右边是对应的管理面板
-    ...SYSTEM_AGENTS.map(sys => bot({
-      id: sys.id, name: sys.name, kind: 'system', role: sys.role, model: '系统默认', skillIds: [], mcpIds: [], prompt: sys.prompt, memory: [],
-      messages: [{ ...msg('bot', sys.name, systemGreeting[sys.role].text, '09:00'), choices: { question: '你想先做什么？', options: systemGreeting[sys.role].options } }],
-    })),
   ]);
   return {
-    version: 1, bots, currentId: 'work',
+    version: 1, bots, currentId: HOME_PAGE_ID,
     order: ['work', 'personnel', 'risk', 'data', 'research', 'brand-team'],
     skills: seedSkills, mcps: seedMcps.map(mcp => mcp.id === 'feishu' ? { ...mcp, credentialExpiresAt: Date.now() + 5 * 86400000 } : mcp), pending: [],
     approvals: [], audit: [], expertPublications: [],

@@ -5,6 +5,7 @@
 import { RESERVED_FACES, pickFace, type FaceSpec } from './botFaces';
 import { botosReducer, HISTORY_DAYS, uid, type Bot, type BotosState, type Mcp, type Skill } from './botModel';
 import { seedMcps, seedSkills } from './botosSeed';
+import { hasGrant } from './capabilities';
 import { inferDashboardTemplate, type DashboardTemplate } from './dashboardTemplates';
 import { openingMessage } from './firstTask';
 import type { Routine } from './workspaceWidgets';
@@ -53,20 +54,28 @@ const orgOwners = new Set(['供应链组', '数据中台', '品牌组', '行政�
 const skillInstalls: Record<string, number> = { research: 1820, risk: 640, weekly: 2310, inspect: 410, brand: 380, slides: 1460, minutes: 970, contract: 220 };
 const mcpInstalls: Record<string, number> = { feishu: 3020, github: 1290, warehouse: 330, erp: 180, websearch: 2750, dingtalk: 1640, 'contracts-db': 95 };
 
-const skillItems: SkillItem[] = [...seedSkills, ...extraSkills].map(skill => ({
-  id: `skill:${skill.id}`, kind: 'skill', name: skill.name, summary: skill.description, description: skill.description,
-  source: skill.owner === 'Samhar' ? 'mine' : orgOwners.has(skill.owner) ? 'org' : 'official', owner: skill.owner, version: skill.version,
-  installs: skillInstalls[skill.id] ?? 0, updatedAt: '11-02', tags: [skill.category],
-  skill: { ...skill, calls: 0 },
-}));
+function skillItem(skill: Skill): SkillItem {
+  return {
+    id: `skill:${skill.id}`, kind: 'skill', name: skill.name, summary: skill.description, description: skill.description,
+    source: skill.createdByUser || skill.owner === 'Samhar' ? 'mine' : orgOwners.has(skill.owner) ? 'org' : 'official',
+    owner: skill.owner, version: skill.version, installs: skillInstalls[skill.id] ?? 0,
+    updatedAt: skill.createdByUser ? '—' : '11-02', tags: [skill.category], skill,
+  };
+}
 
-const connectorItems: ConnectorItem[] = [...seedMcps, ...extraMcps].map(mcp => ({
-  id: `connector:${mcp.id}`, kind: 'connector', name: mcp.name, summary: `工具：${mcp.tools.join('、')}`,
-  description: `通过 MCP 协议接入「${mcp.name}」。${mcp.credential === 'vault' ? '凭证由企业管理员在 Vault 中配置，不会交给专家或第三方。' : '无需凭证。'}`,
-  source: mcp.owner === '平台' ? 'official' : 'org', owner: mcp.owner, version: '1.0.0',
-  installs: mcpInstalls[mcp.id] ?? 0, updatedAt: '10-28', tags: [mcp.credential === 'vault' ? '需凭证' : '免凭证'],
-  mcp: { ...mcp, calls: 0 },
-}));
+function connectorItem(mcp: Mcp): ConnectorItem {
+  return {
+    id: `connector:${mcp.id}`, kind: 'connector', name: mcp.name,
+    summary: mcp.tools.length ? `工具：${mcp.tools.join('、')}` : '尚未声明工具',
+    description: `通过 MCP 协议接入「${mcp.name}」。${mcp.credential === 'vault' ? '凭证由企业管理员在 Vault 中配置。' : '无需凭证。'}`,
+    source: mcp.createdByUser || mcp.owner === 'Samhar' ? 'mine' : mcp.owner === '平台' ? 'official' : 'org',
+    owner: mcp.owner, version: '1.0.0', installs: mcpInstalls[mcp.id] ?? 0,
+    updatedAt: mcp.createdByUser ? '—' : '10-28', tags: [mcp.credential === 'vault' ? '需凭证' : '免凭证'], mcp,
+  };
+}
+
+const skillItems = [...seedSkills, ...extraSkills].map(skill => skillItem({ ...skill, calls: 0 }));
+const connectorItems = [...seedMcps, ...extraMcps].map(mcp => connectorItem({ ...mcp, calls: 0 }));
 
 // ───────────────────────── 专家 / 专家团 ─────────────────────────
 
@@ -126,8 +135,45 @@ export function publishedDefinitions(state: BotosState): RecruitableItem[] {
   return [...latest.values()];
 }
 
-export const findItem = (id: string, state?: BotosState) => marketCatalog.find(item => item.id === id) ?? (state && publishedDefinitions(state).find(item => item.id === id));
+export function catalogFor(state: BotosState): MarketItem[] {
+  const items = new Map(marketCatalog.map(item => [item.id, item]));
+  for (const skill of state.skills) items.set(`skill:${skill.id}`, skillItem(skill));
+  for (const mcp of state.mcps) items.set(`connector:${mcp.id}`, connectorItem(mcp));
+  for (const item of publishedDefinitions(state)) items.set(item.id, item);
+  return [...items.values()];
+}
+
+export const findItem = (id: string, state?: BotosState) => (state ? catalogFor(state) : marketCatalog).find(item => item.id === id);
 export const teamMembers = (team: TeamItem): ExpertItem[] => team.memberDefinitions ?? team.memberIds.map(id => findItem(id)).filter((item): item is ExpertItem => item?.kind === 'expert');
+
+const scenes = [
+  ['研发', /研发|GitHub|\bPR\b|Issue|开发/i], ['法务', /法务|合同/], ['供应链', /供应链|采购|风控|风险/],
+  ['数据', /数据|巡检|查询/], ['行政', /行政|办公|会议|周报|飞书|钉钉/],
+  ['调研', /调研|竞品|网页搜索/], ['内容', /内容|品牌|写作|演示/],
+] as const;
+
+export function marketScenes(item: MarketItem): string[] {
+  const subject = [item.name, item.owner, ...item.tags].join(' ');
+  const matched = scenes.filter(([, pattern]) => pattern.test(subject)).map(([name]) => name);
+  return matched.length ? matched : ['通用'];
+}
+
+export function marketCapabilityIssue(item: MarketItem, now = Date.now()): string | undefined {
+  if (item.kind === 'skill' && item.skill.failRate > 0.08) return '失败率偏高';
+  if (item.kind !== 'connector') return undefined;
+  const { enabled, credential, credentialExpiresAt } = item.mcp;
+  if (!enabled) return '已停用';
+  if (credential !== 'vault' || credentialExpiresAt === undefined) return undefined;
+  if (credentialExpiresAt <= now) return '凭证已过期';
+  if (credentialExpiresAt <= now + 7 * 86_400_000) return '凭证即将过期';
+  return undefined;
+}
+
+export function marketItemAgents(state: BotosState, item: MarketItem): Bot[] {
+  if (item.kind === 'skill') return state.bots.filter(bot => hasGrant(bot, 'skill', item.skill.id));
+  if (item.kind === 'connector') return state.bots.filter(bot => hasGrant(bot, 'mcp', item.mcp.id));
+  return state.bots.filter(bot => bot.sourceId === item.id);
+}
 
 export function versionHistory(item: MarketItem, state: BotosState): MarketVersion[] {
   if (item.versions) return item.versions;

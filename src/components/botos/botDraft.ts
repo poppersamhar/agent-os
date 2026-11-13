@@ -2,7 +2,7 @@ import { pickFace, type FaceSpec } from './botFaces';
 import type { BotKind, BotosState } from './botModel';
 
 export interface BotDraft {
-  name: string; kind: Exclude<BotKind, 'main'>; prompt: string; model: string; skillIds: string[]; mcpIds: string[]; memberIds: string[];
+  name: string; kind: BotKind; prompt: string; model: string; skillIds: string[]; mcpIds: string[]; memberIds: string[];
   /** 不填表示「按名称自动分配」；用户选过就固定下来。 */
   face?: FaceSpec;
 }

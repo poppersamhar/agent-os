@@ -9,15 +9,16 @@ import { kindLabels, recruitItem, teamMembers, type RecruitableItem } from './ma
 import RecruitExpertForm from './RecruitExpertForm';
 import './NewExpertDialog.css';
 
-export default function NewExpertDialog({ state, onClose, onCreate, onInstall, groupId }: {
+export default function NewExpertDialog({ state, onClose, onCreate, onInstall, groupId, initialExpert }: {
   state: BotosState;
   onClose: () => void;
   onCreate: (draft: BotDraft) => void;
   onInstall: (next: BotosState) => void;
   groupId?: string;
+  initialExpert?: RecruitableItem;
 }) {
-  const [tab, setTab] = useState<'blank' | 'recruit'>(groupId ? 'recruit' : 'blank');
-  const [selected, setSelected] = useState<RecruitableItem | null>(null);
+  const [tab, setTab] = useState<'blank' | 'recruit'>(groupId || initialExpert ? 'recruit' : 'blank');
+  const [selected, setSelected] = useState<RecruitableItem | null>(initialExpert ?? null);
   const [name, setName] = useState('');
   const [face, setFace] = useState<FaceSpec>(() => draftFace(emptyDraft(), state));
   const nameRef = useRef<HTMLInputElement>(null);

@@ -20,7 +20,7 @@ function initialPreferences(): Preferences {
 }
 
 /** Pointer movement updates only the grid, not the conversation or dashboard tree. */
-export function useChatSplit() {
+export function useChatSplit(active = true) {
   const [preferences, setPreferences] = useState(initialPreferences);
   const preferencesRef = useRef(preferences);
   const [desktop, setDesktop] = useState(() => window.matchMedia(DESKTOP).matches);
@@ -40,11 +40,11 @@ export function useChatSplit() {
     else panel.style.setProperty('--bos-chat-width', `calc((100% - ${GAP}px) * ${value.ratio})`);
   }, []);
 
-  useLayoutEffect(() => { applyWidth(preferences); }, [preferences, applyWidth]);
+  useLayoutEffect(() => { if (active) applyWidth(preferences); }, [active, preferences, applyWidth]);
   useLayoutEffect(() => {
     const panel = panelRef.current;
     const pane = paneRef.current;
-    if (!panel || !pane) return;
+    if (!active || !panel || !pane) return;
     const updateValue = () => {
       const available = Math.max(1, panel.getBoundingClientRect().width - GAP);
       separatorRef.current?.setAttribute('aria-valuenow', String(Math.min(50, Math.round(pane.getBoundingClientRect().width / available * 100))));
@@ -54,7 +54,7 @@ export function useChatSplit() {
     observer.observe(pane);
     updateValue();
     return () => observer.disconnect();
-  }, []);
+  }, [active]);
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences)); } catch { /* Session state still works. */ }
   }, [preferences]);

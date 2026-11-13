@@ -1,7 +1,8 @@
 import { canUseConnector, grantCapability } from './capabilities';
-import { botosReducer, incrementHistory, isAgent, withDashboardChange, type Bot, type BotMessage, type BotosState } from './botModel';
+import { botosReducer, incrementHistory, withDashboardChange, type Bot, type BotMessage, type BotosState } from './botModel';
 import { approvalStatus, auditApproval, decideApproval, expireApproval, submitApproval, type Approval, type ApprovalDecision } from './governance';
 import { PERSONNEL_MCP_ID, personnelAnalysis, personnelAudit, personnelMessage, runPersonnel, type PersonnelAction, type PersonnelInput, type PersonnelResult } from './personnel';
+import { maturityFor } from './botMaturity';
 import type { ExpertPublication } from './expertDefinitions';
 
 export type GovernanceAction =
@@ -44,7 +45,7 @@ function validTarget(state: BotosState, approval: Approval, at: number): boolean
       return !!bot && canUseConnector(state, bot, PERSONNEL_MCP_ID, at)
         && (bot.personnelResults?.direct?.id === approval.targetId && !!bot.personnelResults?.direct?.recordKey);
     case 'delete':
-      return !!bot && isAgent(bot);
+      return !!bot;
     case 'delete-memory':
       return !!bot?.memory.some(item => item.id === approval.targetId);
     case 'send-external':
@@ -138,7 +139,7 @@ export function applyGovernance(state: BotosState, action: GovernanceAction): Bo
       }, state);
     case 'capture-expert': {
       const bot = state.bots.find(item => item.id === action.publication.botId);
-      if (!bot || !isAgent(bot) || state.expertPublications?.some(item => item.id === action.publication.id || (item.botId === bot.id && item.status === 'pending'))) return state;
+      if (!bot || (!bot.matured && !maturityFor(bot).eligible) || state.expertPublications?.some(item => item.id === action.publication.id || (item.botId === bot.id && item.status === 'pending'))) return state;
       const next = withBot({ ...state, expertPublications: [action.publication, ...(state.expertPublications ?? [])] },
         { ...bot, matured: true, prompt: action.prompt, messages: [...bot.messages, action.message] });
       return action.approval ? applyGovernance(next, { type: 'request-approval', approval: action.approval }) : next;

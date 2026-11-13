@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "lint:workspace": "eslint src",
-    "test": "node tests/botos-check.mjs && node tests/market-check.mjs && node tests/personnel-check.mjs && node tests/workspace-widgets-check.mjs"
+    "test": "node tests/botos-check.mjs && node tests/market-check.mjs && node tests/personnel-check.mjs && node tests/workspace-widgets-check.mjs && node tests/home-check.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.8.0",
