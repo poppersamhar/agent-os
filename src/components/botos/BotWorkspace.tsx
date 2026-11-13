@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type Dispatch, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type Dispatch, type KeyboardEvent, type ReactNode } from 'react';
 import { ArrowUp, Bell, FileText, Hexagon, Moon, Plus, Store, Sun } from 'lucide-react';
 import NoticePanel from './NoticePanel';
 import { useNotices } from './notices';
@@ -18,6 +18,7 @@ import './BotWorkspace.css';
 
 type Theme = 'light' | 'dark';
 const THEME_KEY = 'agentos-theme-v1';
+const SIDE_KEY = 'agentos-side-v1';
 function initialTheme(): Theme {
   try {
     const saved = localStorage.getItem(THEME_KEY);
@@ -49,7 +50,7 @@ function mainBotAnswer(state: BotosState, text: string): string | null {
     const working = bots.filter(b => pendingCount(state, b.id) > 0);
     return `你有 ${bots.length} 个智能体，${working.length ? `「${working.map(b => b.name).join('、')}」正在工作` : '目前都空闲'}。右侧工作台有每个智能体的运行记录。`;
   }
-  if (/^(你好|hi|hello|你是谁|你能做什么)[？?！!。\s]*$/i.test(text)) return '我是企业效能管理智能体。我汇总所有智能体的进展，也能回答智能体、技能、连接器的使用情况。具体工作交给下方专家栏里的专家，或用「+」新建一个。';
+  if (/^(你好|hi|hello|你是谁|你能做什么)[？?！!。\s]*$/i.test(text)) return '我是企业效能管理智能体。我汇总所有智能体的进展，也能回答智能体、技能、连接器的使用情况。具体工作交给左侧的智能体，或用「+」新建一个。';
   return null;
 }
 
@@ -84,14 +85,14 @@ function ChatPanelIcon() {
   </svg>;
 }
 
-function Conversation({ bot, state, recentlyDone, active, onCollapse, onAnswer, onOther }: { bot: Bot; state: BotosState; recentlyDone: string[]; active: boolean; onCollapse: () => void; onAnswer: (messageId: string, answer: string) => void; onOther: () => void }) {
+function Conversation({ bot, state, recentlyDone, active, onCollapse, onAnswer, onOther, children }: { bot: Bot; state: BotosState; recentlyDone: string[]; active: boolean; onCollapse: () => void; onAnswer: (messageId: string, answer: string) => void; onOther: () => void; children?: ReactNode }) {
   const end = useRef<HTMLDivElement>(null);
   const working = pendingCount(state, bot.id) > 0;
   useEffect(() => { if (active) end.current?.scrollIntoView({ block: 'end' }); }, [bot.id, bot.messages.length, working, active]);
   return <section className="bos-chat" aria-label={`${bot.name} 对话`}>
     <header className="bos-chat-head">
       <span className="bos-row-name"><BotAvatar bot={bot} size={24} state={faceStateOf(state, bot, recentlyDone)} members={memberBots(state, bot)} /><span className="bos-chat-title">{bot.name}</span></span>
-      <button type="button" className="bos-icon bos-icon--dark" aria-label="收起对话" title="收起对话" onClick={onCollapse}>
+      <button type="button" className="bos-icon bos-icon--dark bos-chat-collapse" aria-label="收起对话" title="收起对话" onClick={onCollapse}>
         <ChatPanelIcon />
       </button>
     </header>
@@ -105,17 +106,27 @@ function Conversation({ bot, state, recentlyDone, active, onCollapse, onAnswer, 
       {working ? <article className="bos-msg bos-msg--bot"><span className="bos-msg-name">{bot.name}</span><p className="bos-typing"><i /><i /><i /></p></article> : null}
       <div ref={end} />
     </div>
+    {children}
   </section>;
 }
 
+type Tip = { text: string; top: number; left: number } | null;
+
 /**
- * 首页 / 专家 / 技能 / 连接器的按钮。
- * 未选中：头像在上、名字小字在下（像桌面应用图标），和智能体栏的左右排列区分开。
- * 选中：深色胶囊（头像 + 名字），和当前对话的智能体一致。
+ * 左侧侧栏里的一个智能体。
+ * 展开时：头像 + 名字 + 进行中的任务数；收起时只有头像，悬停或聚焦立刻弹出名字。
+ * 选中时有一圈主色描边。
  */
-function SysButton({ bot, label, selected, state, onClick }: { bot: Bot; label: string; selected: boolean; state: FaceState; onClick: () => void }) {
-  return <button type="button" className={`bos-sys-button${selected ? ' is-selected' : ''}`} aria-label={label} aria-pressed={selected} title={bot.kind === 'main' ? bot.name : label} onClick={onClick}>
-    <BotAvatar bot={bot} size={selected ? 24 : 30} state={state} /><span>{label}</span>
+function RailItem({ bot, name, label, selected, face, badge, members, expanded, onTip, onClick }: { bot: Bot; name: string; label: string; selected: boolean; face: FaceState; badge?: number; members?: Bot[]; expanded: boolean; onTip: (tip: Tip) => void; onClick: () => void }) {
+  const show = (el: HTMLElement) => {
+    if (expanded) return;
+    const r = el.getBoundingClientRect();
+    onTip({ text: label, top: r.top + r.height / 2, left: r.right + 10 });
+  };
+  return <button type="button" className={`bos-side-item${selected ? ' is-selected' : ''}`} aria-label={label} aria-current={selected ? 'true' : undefined} onClick={onClick}
+    onMouseEnter={e => show(e.currentTarget)} onMouseLeave={() => onTip(null)} onFocus={e => show(e.currentTarget)} onBlur={() => onTip(null)}>
+    <span className="bos-side-avatar"><BotAvatar bot={bot} size={26} state={face} members={members} />{badge && !expanded ? <span className="bos-badge">{badge}</span> : null}</span>
+    {expanded ? <><span className="bos-side-name">{name}</span>{badge ? <span className="bos-side-count">{badge}</span> : null}</> : null}
   </button>;
 }
 
@@ -134,6 +145,13 @@ export default function BotWorkspace() {
     try { localStorage.setItem(THEME_KEY, next); } catch { /* 仅本次生效 */ }
     return next;
   });
+  const [sideOpen, setSideOpen] = useState(() => { try { return localStorage.getItem(SIDE_KEY) !== 'closed'; } catch { return true; } });
+  const toggleSide = () => setSideOpen(v => {
+    try { localStorage.setItem(SIDE_KEY, v ? 'closed' : 'open'); } catch { /* 仅本次生效 */ }
+    return !v;
+  });
+  const [tip, setTip] = useState<Tip>(null);
+  const railProps = { expanded: sideOpen, onTip: setTip };
   const [recentlyDone, setRecentlyDone] = useState<string[]>([]);
   // 任务完成后头像「刚完成」几秒（眯眼笑、蹦一下），再回到原来的状态。
   const markDone = useCallback((botId: string) => {
@@ -145,12 +163,13 @@ export default function BotWorkspace() {
   useEffect(() => { const el = inputRef.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 140)}px`; }, [draft]);
 
   const current = state.bots.find(b => b.id === state.currentId) ?? state.bots[0];
-  const others = useMemo(() => state.order.filter(id => id !== current.id).map(id => state.bots.find(b => b.id === id)).filter((b): b is Bot => !!b), [state.order, state.bots, current.id]);
+  const agents = useMemo(() => state.order.map(id => state.bots.find(b => b.id === id)).filter((b): b is Bot => !!b && isAgent(b)), [state.order, state.bots]);
   const lastMessage = current.messages[current.messages.length - 1];
   const mainBot = state.bots.find(b => b.id === MAIN_BOT_ID) ?? state.bots[0];
   const onMain = current.kind === 'main';
   const sysRole = current.kind === 'system' ? current.role : undefined;
-  const systemAgents = SYSTEM_AGENTS.map(sys => state.bots.find(b => b.id === sys.id)).filter((b): b is Bot => !!b);
+  // 竖栏里的顺序：技能、连接器、专家
+  const systemAgents = (['skills', 'connectors', 'experts'] as const).map(role => SYSTEM_AGENTS.find(sys => sys.role === role)).map(sys => state.bots.find(b => b.id === sys?.id)).filter((b): b is Bot => !!b);
 
   const selectBot = (id: string) => { dispatch({ type: 'select', id }); setChatOpen(true); };
   const send = (preset?: string) => {
@@ -193,36 +212,64 @@ export default function BotWorkspace() {
   };
   const hubProps = { state, dispatch, onOpenBot: selectBot, onClose: () => selectBot(MAIN_BOT_ID), onNewBot: () => setCreating(true) };
 
-  return <div className={`bos-shell kdx-theme${onMain ? ' is-home' : ''}`} data-theme={theme}>
+  return <div className={`bos-shell kdx-theme${sideOpen ? ' has-side-open' : ''}`} data-theme={theme}>
     {state.pending.map(task => <TaskRunner key={task.id} task={task} state={state} dispatch={dispatch} onDone={markDone} />)}
-    {/* 首页（企业效能管理智能体）顶部显示 Logo 与名称；其他页面不占这一行，智能体头像放在面板左上角 */}
-    {onMain ? <header className="bos-top">
-      <button type="button" className="bos-brand" onClick={() => selectBot(MAIN_BOT_ID)} aria-label="回到企业效能管理智能体"><Hexagon size={24} fill="currentColor" strokeWidth={1.4} /><span>Agent OS</span></button>
-    </header> : null}
-
-    {/* 右侧窄栏：头像、亮暗切换、通知 */}
-    <aside className="bos-rail" aria-label="账户与通知">
-      <button type="button" className="bos-me" aria-label="账户" aria-expanded={accountOpen} onClick={() => { setAccountOpen(v => !v); setNoticesOpen(false); }}>S</button>
-      <button type="button" className="bos-rail-button" onClick={toggleTheme} aria-label={theme === 'dark' ? '切换到亮色' : '切换到深色'} title={theme === 'dark' ? '切换到亮色' : '切换到深色'}>
-        {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-      </button>
-      <button type="button" className="bos-rail-button" aria-label={`通知${unread ? `，${unread} 条未读` : ''}`} aria-expanded={noticesOpen} title="通知" onClick={() => { setNoticesOpen(v => !v); setAccountOpen(false); }}>
-        <Bell size={13} />{unread ? <span className="bos-rail-dot" aria-hidden="true" /> : null}
-      </button>
-      {accountOpen ? <div className="bos-popover" role="menu">
-        <strong>Samhar</strong><p>交互原型 · 数据保存在本地，智能体回复为模拟。</p>
-        <a role="menuitem" className="bos-menu-market" href="?view=market"><Store size={15} /><span><strong>市场</strong><small>Agent Market · 专家、专家团、技能、连接器</small></span></a>
-        <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'reset', state: seedBotos() }); setAccountOpen(false); }}>重置演示数据</button>
-        <a role="menuitem" href="?view=avatars">智能体头像样稿</a>
-      </div> : null}
-      {noticesOpen ? <NoticePanel notices={notices} onChange={setNotices} onClose={() => setNoticesOpen(false)} /> : null}
+    {/* 左侧竖栏：上面是首页、技能、连接器、专家、新建和用户的智能体；下面是我的、通知、亮暗切换 */}
+    <aside className={`bos-side${sideOpen ? ' is-open' : ''}`} aria-label="智能体">
+      <div className="bos-side-top">
+        {/* 展开时：左边是 Agent OS 标识，右边是收起按钮；收起时只留按钮 */}
+        <div className="bos-side-head">
+          {sideOpen ? <button type="button" className="bos-side-brand" onClick={() => selectBot(MAIN_BOT_ID)} aria-label="Agent OS，回到首页"><Hexagon size={20} fill="currentColor" strokeWidth={1.4} /><span>Agent OS</span></button> : null}
+          <button type="button" className="bos-side-toggle" onClick={toggleSide} aria-expanded={sideOpen} aria-label={sideOpen ? '收起侧栏' : '展开侧栏'} title={sideOpen ? '收起侧栏' : '展开侧栏'}>
+            <ChatPanelIcon />
+          </button>
+        </div>
+        <RailItem bot={mainBot} name="首页" label={`首页：${mainBot.name}`} selected={onMain} face={faceStateOf(state, mainBot, recentlyDone)} {...railProps} onClick={() => selectBot(MAIN_BOT_ID)} />
+        <div className="bos-side-group" role="group" aria-label="技能、连接器、专家">
+          {systemAgents.map(sys => <RailItem key={sys.id} bot={sys} name={sys.name} label={sys.name} selected={current.id === sys.id} face={faceStateOf(state, sys, recentlyDone)} {...railProps}
+            onClick={() => selectBot(current.id === sys.id ? MAIN_BOT_ID : sys.id)} />)}
+        </div>
+        <button type="button" className="bos-side-new" aria-label="新建智能体" title={sideOpen ? undefined : '新建智能体'} onClick={() => setCreating(true)}><span className="bos-add" aria-hidden="true"><Plus size={15} strokeWidth={2.2} /></span>{sideOpen ? <span className="bos-side-name">新建智能体</span> : null}</button>
+        <div className="bos-side-list">
+          {agents.map(b => {
+            const n = pendingCount(state, b.id);
+            const face = faceStateOf(state, b, recentlyDone);
+            const status = { working: `，${n} 项进行中`, done: '，刚完成', needs: '，需要你处理', idle: '' }[face];
+            return <RailItem key={b.id} bot={b} name={b.name} label={`${b.name}（${agentLabel(b)}）${status}`} selected={current.id === b.id} face={face} badge={n} members={memberBots(state, b)} {...railProps} onClick={() => selectBot(b.id)} />;
+          })}
+        </div>
+      </div>
+      <div className="bos-side-bottom">
+        <button type="button" className="bos-side-me" aria-label="我的" title={sideOpen ? undefined : '我的'} aria-expanded={accountOpen} onClick={() => { setAccountOpen(v => !v); setNoticesOpen(false); }}><span className="bos-me" aria-hidden="true">S</span>{sideOpen ? <span className="bos-side-name">我的</span> : null}</button>
+        <button type="button" className="bos-rail-button" aria-label={`通知${unread ? `，${unread} 条未读` : ''}`} aria-expanded={noticesOpen} title="通知" onClick={() => { setNoticesOpen(v => !v); setAccountOpen(false); }}>
+          <Bell size={13} />{unread ? <span className="bos-rail-dot" aria-hidden="true" /> : null}
+        </button>
+        <button type="button" className="bos-rail-button" onClick={toggleTheme} aria-label={theme === 'dark' ? '切换到亮色' : '切换到深色'} title={theme === 'dark' ? '切换到亮色' : '切换到深色'}>
+          {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+        </button>
+        {accountOpen ? <div className="bos-popover" role="menu">
+          <strong>Samhar</strong><p>交互原型 · 数据保存在本地，智能体回复为模拟。</p>
+          <a role="menuitem" className="bos-menu-market" href="?view=market"><Store size={15} /><span><strong>市场</strong><small>Agent Market · 专家、专家团、技能、连接器</small></span></a>
+          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'reset', state: seedBotos() }); setAccountOpen(false); }}>重置演示数据</button>
+          <a role="menuitem" href="?view=avatars">智能体头像样稿</a>
+        </div> : null}
+        {noticesOpen ? <NoticePanel notices={notices} onChange={setNotices} onClose={() => setNoticesOpen(false)} /> : null}
+      </div>
     </aside>
+    {tip ? <div className="bos-side-tip" role="tooltip" style={{ top: tip.top, left: tip.left }}>{tip.text}</div> : null}
 
     <main ref={panelRef} className={`bos-panel${chatOpen ? '' : ' is-wide'}${resizing ? ' is-resizing' : ''}${settling ? ' is-settling' : ''}`}>
       <div ref={paneRef} id="bos-conversation" className="bos-chat-pane" inert={!chatOpen && !resizing} aria-hidden={!chatOpen && !resizing}>
         <Conversation bot={current} state={state} recentlyDone={recentlyDone} active={chatOpen || resizing} onCollapse={() => setChatOpen(false)}
           onAnswer={(messageId, answer) => { dispatch({ type: 'answer', botId: current.id, messageId, answer }); send(answer); }}
-          onOther={() => inputRef.current?.focus()} />
+          onOther={() => inputRef.current?.focus()}>
+          {/* 输入框放在对话面板底部 */}
+          <div className="bos-input">
+            <textarea ref={inputRef} rows={1} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onKeyDown}
+              placeholder={current.kind === 'main' ? '问企业效能管理智能体：哪些智能体在工作？' : `告诉 ${current.name} 你想要做什么…`} aria-label={`发送给 ${current.name}`} />
+            <button type="button" className="bos-send" aria-label="发送" disabled={!draft.trim()} onClick={() => send()}><ArrowUp size={17} strokeWidth={2.2} /></button>
+          </div>
+        </Conversation>
       </div>
       <div ref={separatorRef} className="bos-chat-resizer" role="separator" tabIndex={0} aria-label="调整对话宽度" aria-orientation="vertical"
         aria-controls="bos-conversation" aria-valuemin={0} aria-valuemax={50} {...separatorProps} />
@@ -233,47 +280,10 @@ export default function BotWorkspace() {
             : sysRole === 'connectors' ? <McpHub {...hubProps} />
               : <BotDashboard state={state} bot={current} recentlyDone={recentlyDone} faceState={faceStateOf(state, current, recentlyDone)} onSelectBot={selectBot} onMature={publish => mature(current, publish)} />}
       </div>
-    </main>
-
-    <nav className="bos-botbar" aria-label="智能体栏">
-      {/* 首页和管理智能体分别在左下角、右下角的按钮上体现，智能体栏只放用户的智能体 */}
-      {!isAgent(current) ? null : <>
-        <button type="button" className="bos-current" onClick={() => setChatOpen(true)} aria-current="true" title={`当前对话：${current.name}`}>
-          <BotAvatar bot={current} size={24} state={faceStateOf(state, current, recentlyDone)} members={memberBots(state, current)} />
-          <span className="bos-pill-name">{current.name}</span>{pendingCount(state, current.id) ? <span className="bos-badge">{pendingCount(state, current.id)}</span> : null}
-        </button>
-        <span className="bos-botbar-divider" aria-hidden="true" />
-      </>}
-      <button type="button" className="bos-add" aria-label="新建智能体" title="新建智能体" onClick={() => setCreating(true)}><Plus size={16} strokeWidth={2.2} /></button>
-      <div className="bos-botbar-list">
-        {others.map(b => {
-          const n = pendingCount(state, b.id);
-          const face = faceStateOf(state, b, recentlyDone);
-          const status = { working: `，${n} 项进行中`, done: '，刚完成', needs: '，需要你处理', idle: '' }[face];
-          return <button type="button" key={b.id} className="bos-bot-pill" onClick={() => selectBot(b.id)} aria-label={`${b.name}（${agentLabel(b)}）${status}`}>
-            <BotAvatar bot={b} size={24} state={face} members={memberBots(state, b)} />
-            <span className="bos-pill-name">{b.name}</span>{n ? <span className="bos-badge">{n}</span> : null}
-          </button>;
-        })}
-      </div>
-    </nav>
-
-    <footer className="bos-inputrow">
       {!chatOpen ? <button type="button" className="bos-collapsed-chat" onClick={() => setChatOpen(true)} aria-label={`展开 ${current.name} 的对话`}>
         <ChatPanelIcon /><span><strong>{current.name}</strong>{lastMessage ? <small>{lastMessage.text}</small> : null}</span>
       </button> : null}
-      <SysButton bot={mainBot} label="首页" selected={onMain} state={faceStateOf(state, mainBot, recentlyDone)} onClick={() => selectBot(MAIN_BOT_ID)} />
-      <div className="bos-input">
-        <textarea ref={inputRef} rows={1} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onKeyDown}
-          placeholder={current.kind === 'main' ? '问企业效能管理智能体：哪些智能体在工作？哪些技能失败最多？' : `告诉 ${current.name} 你想要做什么任务…`} aria-label={`发送给 ${current.name}`} />
-        <button type="button" className="bos-send" aria-label="发送" disabled={!draft.trim()} onClick={() => send()}><ArrowUp size={17} strokeWidth={2.2} /></button>
-      </div>
-      {/* 专家 / 技能 / 连接器：和首页一样，点开后左边对话，右边是管理面板 */}
-      <div className="bos-hub-buttons" role="group" aria-label="专家、技能、连接器">
-        {systemAgents.map(sys => <SysButton key={sys.id} bot={sys} label={sys.name} selected={current.id === sys.id} state={faceStateOf(state, sys, recentlyDone)}
-          onClick={() => selectBot(current.id === sys.id ? MAIN_BOT_ID : sys.id)} />)}
-      </div>
-    </footer>
+    </main>
 
     {creating ? <NewExpertDialog state={state} onClose={() => setCreating(false)} onCreate={create}
       onInstall={next => { dispatch({ type: 'reset', state: next }); setCreating(false); setChatOpen(true); }} /> : null}

@@ -13,12 +13,7 @@
 .bos-shell :focus-visible { outline: 2px solid var(--u4f-focus); outline-offset: 2px; }
 
 /* 顶部：品牌 + 头像，头像下方是亮 / 暗切换 */
-.bos-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.bos-brand { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 0; height: 32px; color: var(--u4f-text); }
-.bos-brand span { font-size: 22px; letter-spacing: -.4px; }
 .bos-me { width: 32px; height: 32px; border-radius: var(--u4f-radius-full); border: 1px solid var(--u4f-border); background: var(--u4f-surface-raised); color: var(--u4f-text-muted); font-size: 12px; }
-.bos-theme-toggle { width: 28px; height: 28px; border-radius: var(--u4f-radius-full); border: 1px solid var(--u4f-border); background: var(--u4f-surface); color: var(--u4f-text-muted); display: grid; place-items: center; transition: background var(--u4f-duration-fast), color var(--u4f-duration-fast); }
-.bos-theme-toggle:hover { background: var(--u4f-surface-raised); color: var(--u4f-text); border-color: var(--u4f-border-strong); }
 .bos-popover { position: absolute; right: 40px; top: 0; z-index: 30; width: 250px; padding: 16px; background: var(--u4f-surface-raised); border: 1px solid var(--u4f-border); border-radius: 12px; box-shadow: var(--u4f-shadow-raised); display: grid; gap: 8px; }
 .bos-popover p { margin: 0 0 4px; color: var(--u4f-text-muted); font-size: 12px; line-height: 1.6; }
 .bos-popover button, .bos-popover a { text-align: left; border: 0; background: var(--u4f-surface); border-radius: var(--u4f-radius-md); padding: 8px 10px; color: var(--u4f-text); text-decoration: none; font-size: 12px; }
@@ -26,7 +21,7 @@
 
 /* 面板 */
 .bos-panel {
-  --bos-chat-size: clamp(0px, var(--bos-chat-width, 340px), calc((100% - 8px) / 2));
+  --bos-chat-size: clamp(0px, var(--bos-chat-width, 40%), calc((100% - 8px) / 2));
   position: relative; min-height: 0; min-width: 0; display: grid;
   grid-template-columns: var(--bos-chat-size) minmax(0, 1fr); gap: min(8px, var(--bos-chat-size));
 }
@@ -69,24 +64,15 @@ html.bos-resizing-chat, html.bos-resizing-chat * { cursor: col-resize !important
 @keyframes bos-blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
 
 /* Bot 栏：只区分当前 Bot 与其他 Bot；工作中用朱砂舵点 */
-.bos-botbar { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.bos-current { position: relative; flex-shrink: 0; min-width: 110px; height: 44px; padding: 0 20px 0 10px; display: inline-flex; align-items: center; gap: 8px; border-radius: var(--u4f-radius-full); border: 0; background: var(--u4f-primary); color: var(--u4f-on-primary); font-size: 14px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bos-botbar-divider { width: 1px; height: 34px; background: var(--u4f-border-strong); flex-shrink: 0; }
 .bos-add { width: 30px; height: 30px; flex-shrink: 0; border-radius: var(--u4f-radius-full); border: 0; background: var(--u4f-primary); color: var(--u4f-on-primary); display: grid; place-items: center; }
-.bos-add:hover, .bos-current:hover { background: var(--u4f-primary-hover); }
-.bos-botbar-list { display: flex; gap: 10px; overflow-x: auto; padding: 6px 2px; scrollbar-width: none; }
-.bos-botbar-list::-webkit-scrollbar { display: none; }
-.bos-bot-pill { position: relative; flex-shrink: 0; height: 44px; padding: 0 18px 0 10px; border-radius: var(--u4f-radius-full); border: 1px solid var(--u4f-border); background: var(--u4f-surface-raised); color: var(--u4f-text); font-size: 14px; display: inline-flex; align-items: center; gap: 6px; transition: background var(--u4f-duration-fast), border-color var(--u4f-duration-fast); }
-.bos-bot-pill:hover { background: var(--u4f-primary-subtle); border-color: var(--u4f-border-strong); }
+.bos-add:hover { background: var(--u4f-primary-hover); }
 .bos-badge { position: absolute; top: -5px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--u4f-radius-full); background: var(--u4f-helm); color: #FFFFFF; font-size: 10px; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px var(--u4f-background); }
-.bos-current .bos-badge { position: static; display: inline-block; margin-left: 2px; box-shadow: none; }
 .bos-pill-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bos-agent--needs small { color: var(--u4f-helm); }
 .bos-agent--working small, .bos-agent--done small { color: var(--u4f-text); }
 @keyframes bos-pulse { from { opacity: .15; } to { opacity: .85; } }
 
 /* 输入行 */
-.bos-inputrow { display: flex; align-items: flex-end; gap: 10px; }
 .bos-collapsed-chat { flex-shrink: 0; width: 230px; height: 64px; border: 1px solid var(--u4f-border); border-radius: var(--u4f-radius-lg); background: var(--u4f-surface-raised); color: var(--u4f-text); display: flex; align-items: flex-start; gap: 8px; padding: 12px 14px; text-align: left; }
 .bos-collapsed-chat:hover { border-color: var(--u4f-border-strong); }
 .bos-collapsed-chat span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -97,7 +83,6 @@ html.bos-resizing-chat, html.bos-resizing-chat * { cursor: col-resize !important
 .bos-input textarea { flex: 1; resize: none; border: 0; outline: none !important; background: none; line-height: 1.6; padding: 6px 0; max-height: 140px; }
 .bos-input textarea::placeholder { color: var(--u4f-text-muted); opacity: .8; }
 .bos-send { width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--u4f-radius-full); border: 0; background: var(--u4f-primary); color: var(--u4f-on-primary); display: grid; place-items: center; }
-.bos-hub-buttons { display: flex; gap: 8px; flex-shrink: 0; }
 
 /* 仪表盘 */
 .bos-dashboard { padding: 16px 16px 18px; }
@@ -285,8 +270,6 @@ html.bos-resizing-chat, html.bos-resizing-chat * { cursor: col-resize !important
   .bos-panel.is-wide .bos-chat-pane { display: none; }
   .bos-chat-pane > .bos-chat { min-width: 0; }
   .bos-chat-resizer { display: none; }
-  .bos-inputrow { flex-wrap: wrap; }
-  .bos-hub-buttons { order: -1; width: 100%; justify-content: flex-end; }
   .bos-collapsed-chat { flex: 0 0 100%; width: 100%; height: 48px; padding: 8px 12px; }
   .bos-dash-grid, .bos-editor { grid-template-columns: 1fr; }
   .bos-card--span2, .bos-card--span3 { grid-column: span 1; }
@@ -312,11 +295,6 @@ html.bos-resizing-chat, html.bos-resizing-chat * { cursor: col-resize !important
 .bos-face-button:hover:not(:disabled) { border-color: var(--u4f-border-strong); }
 .bos-face-button:disabled { cursor: default !important; opacity: 1 !important; padding: 3px; }
 
-/* 当前 Bot 胶囊底色就是主色；主色头像会和底色融在一起，给胶囊里的头像描一圈反色边 */
-.bos-current .kdx-face svg, .bos-current .kdx-face-stack {
-  --kdx-edge: var(--u4f-on-primary);
-  filter: drop-shadow(1.5px 0 0 var(--kdx-edge)) drop-shadow(-1.5px 0 0 var(--kdx-edge)) drop-shadow(0 1.5px 0 var(--kdx-edge)) drop-shadow(0 -1.5px 0 var(--kdx-edge));
-}
 
 /* 头像菜单里的市场入口 */
 .bos-popover .bos-menu-market { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--u4f-primary-subtle); color: var(--u4f-primary); }
@@ -324,25 +302,11 @@ html.bos-resizing-chat, html.bos-resizing-chat * { cursor: col-resize !important
 .bos-menu-market strong { font-size: 13px; }
 .bos-menu-market small { font-size: 11px; color: var(--u4f-text-muted); }
 
-/* ───────── 布局：右侧窄栏 + 首页才有的品牌行 ───────── */
-.bos-shell { grid-template-columns: minmax(0, 1fr) 30px; column-gap: 8px;
-  grid-template-areas: "panel rail" "bar bar" "input input"; grid-template-rows: minmax(0, 1fr) auto auto; }
-.bos-shell.is-home { grid-template-areas: "top rail" "panel rail" "bar bar" "input input"; grid-template-rows: auto minmax(0, 1fr) auto auto; }
-.bos-top { grid-area: top; }
-.bos-panel { grid-area: panel; }
-.bos-botbar { grid-area: bar; }
-.bos-inputrow { grid-area: input; }
-.bos-brand { height: 30px; }
-.bos-brand span { font-size: 19px; }
 
-.bos-rail { grid-area: rail; position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 2px; }
-.bos-rail .bos-me { width: 26px; height: 26px; font-size: 11px; }
 .bos-rail-button { position: relative; width: 24px; height: 24px; border-radius: var(--u4f-radius-full); border: 1px solid var(--u4f-border); background: var(--u4f-surface); color: var(--u4f-text-muted); display: grid; place-items: center; padding: 0; transition: background var(--u4f-duration-fast), color var(--u4f-duration-fast); }
 .bos-rail-button:hover, .bos-rail-button[aria-expanded='true'] { background: var(--u4f-surface-raised); color: var(--u4f-text); border-color: var(--u4f-border-strong); }
 .bos-rail-dot { position: absolute; top: -1px; right: -1px; width: 8px; height: 8px; border-radius: var(--u4f-radius-full); background: var(--u4f-helm); box-shadow: 0 0 0 2px var(--u4f-background); }
-.bos-rail .bos-popover { right: 36px; top: 0; }
 
-/* 非首页面板左上角的 Bot 头像 */
 .bos-dash-head { display: flex; align-items: center; gap: 12px; }
 
 /* ───────── 通知中心 ───────── */
@@ -393,7 +357,6 @@ html.bos-resizing-chat, html.bos-resizing-chat * { cursor: col-resize !important
 .bos-choices.is-done button[aria-pressed='true'] { opacity: 1; }
 .bos-choices button[aria-pressed='true'] .bos-choice-key { background: var(--u4f-primary); border-color: var(--u4f-primary); color: var(--u4f-on-primary); }
 
-/* 右下角三个管理智能体 */
 
 /* 沉淀为专家 / 专家团 */
 .bos-dash-head > div:nth-child(2) { flex: 1; min-width: 0; }
@@ -405,18 +368,56 @@ html.bos-resizing-chat, html.bos-resizing-chat * { cursor: col-resize !important
 .bos-mature-pop .bos-form-actions { margin-top: 4px; }
 .bos-matured { flex-shrink: 0; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--u4f-radius-full); background: var(--u4f-success-subtle); color: var(--u4f-success); font-size: 12px; font-weight: 500; }
 
-/* 智能体栏：其他智能体不要外框，只保留头像和名称 */
-.bos-bot-pill { border-color: transparent; background: none; padding: 0 10px 0 6px; height: 40px; gap: 8px; }
-.bos-bot-pill:hover { background: var(--u4f-surface); border-color: transparent; }
-.bos-bot-pill .bos-badge { top: 0; right: 0; }
-.bos-botbar-list { gap: 4px; }
 
-/* 首页与专家 / 技能 / 连接器（设计 D）：未选中是头像 + 下方小字；选中是深色胶囊 */
-.bos-hub-buttons { gap: 2px; align-items: center; }
-.bos-shell .bos-sys-button { flex-shrink: 0; width: 56px; height: 50px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0; border: 0; border-radius: 12px; background: none; color: var(--u4f-text-muted); line-height: 1; font-size: 11px; transition: background var(--u4f-duration-fast), color var(--u4f-duration-fast); }
-.bos-shell .bos-sys-button:hover { background: var(--u4f-surface); color: var(--u4f-text); }
-.bos-shell .bos-sys-button.is-selected { width: auto; height: 44px; flex-direction: row; gap: 8px; padding: 0 18px 0 10px; border-radius: var(--u4f-radius-full); background: var(--u4f-primary); color: var(--u4f-on-primary); font-size: 14px; }
-.bos-shell .bos-sys-button.is-selected:hover { background: var(--u4f-primary-hover); }
-.bos-sys-button span { white-space: nowrap; }
-/* 胶囊里的头像描一圈反色边，避免主色头像和底色融在一起 */
-.bos-sys-button.is-selected .kdx-face svg { --kdx-edge: var(--u4f-on-primary); filter: drop-shadow(1.5px 0 0 var(--kdx-edge)) drop-shadow(-1.5px 0 0 var(--kdx-edge)) drop-shadow(0 1.5px 0 var(--kdx-edge)) drop-shadow(0 -1.5px 0 var(--kdx-edge)); }
+
+/* ───────── 布局：左侧侧栏 + 左对话（含输入框）+ 右面板 ───────── */
+.bos-shell { --bos-side-w: 44px; grid-template-columns: var(--bos-side-w) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); column-gap: 10px; padding: 12px 12px 12px 10px; transition: grid-template-columns var(--u4f-duration-base) var(--u4f-easing-standard); }
+.bos-shell.has-side-open { --bos-side-w: 176px; }
+
+/* 侧栏：收起时一列头像居中；展开时头像 + 名字左对齐 */
+.bos-side { position: relative; min-height: 0; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 12px; padding: 2px 0; }
+.bos-side.is-open { align-items: stretch; }
+.bos-side-top { min-height: 0; display: flex; flex-direction: column; align-items: inherit; gap: 12px; }
+.bos-side-group { display: flex; flex-direction: column; align-items: inherit; gap: 2px; }
+.bos-side-list { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: inherit; gap: 2px; padding: 2px; margin: -2px; scrollbar-width: none; }
+.bos-side-list::-webkit-scrollbar { display: none; }
+
+.bos-side-item, .bos-side-new, .bos-side-me { position: relative; flex-shrink: 0; min-width: 38px; height: 38px; border: 0; border-radius: 12px; background: none; color: var(--u4f-text); display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 6px; transition: background var(--u4f-duration-fast); }
+.bos-side.is-open :is(.bos-side-item, .bos-side-new, .bos-side-me) { justify-content: flex-start; padding: 0 8px 0 6px; }
+.bos-side-item:hover, .bos-side-new:hover, .bos-side-me:hover, .bos-side-me[aria-expanded='true'] { background: var(--u4f-surface); }
+.bos-side-item.is-selected { background: var(--u4f-surface-raised); box-shadow: inset 0 0 0 1.5px var(--u4f-primary); }
+.bos-side-avatar { position: relative; flex-shrink: 0; width: 26px; height: 26px; display: grid; place-items: center; }
+.bos-side-avatar .bos-badge { top: -6px; right: -8px; min-width: 16px; height: 16px; line-height: 16px; font-size: 9px; padding: 0 4px; }
+.bos-side-name { min-width: 0; flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.bos-side-item.is-selected .bos-side-name { font-weight: 600; }
+.bos-side-count { flex-shrink: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--u4f-radius-full); background: var(--u4f-helm); color: #FFFFFF; font-size: 10px; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
+.bos-side-new .bos-add { width: 26px; height: 26px; flex-shrink: 0; }
+.bos-side-new .bos-side-name { color: var(--u4f-text-muted); }
+.bos-side-me .bos-me { width: 26px; height: 26px; flex-shrink: 0; font-size: 11px; display: grid; place-items: center; }
+
+/* 侧栏底部：收起时竖排；展开时「我的」占一行，通知、亮暗、收起排成一行 */
+.bos-side-bottom { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.bos-side.is-open .bos-side-bottom { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bos-side.is-open .bos-side-me { flex: 0 0 100%; }
+.bos-rail-button { position: relative; width: 26px; height: 26px; border-radius: var(--u4f-radius-full); border: 1px solid var(--u4f-border); background: var(--u4f-surface); color: var(--u4f-text-muted); display: grid; place-items: center; padding: 0; transition: background var(--u4f-duration-fast), color var(--u4f-duration-fast); }
+.bos-rail-button:hover, .bos-rail-button[aria-expanded='true'] { background: var(--u4f-surface-raised); color: var(--u4f-text); border-color: var(--u4f-border-strong); }
+.bos-side-toggle { flex-shrink: 0; width: 38px; height: 30px; border: 0; border-radius: 10px; background: none; color: var(--u4f-text-muted); display: grid; place-items: center; padding: 0; transition: background var(--u4f-duration-fast), color var(--u4f-duration-fast); }
+.bos-side-toggle:hover { background: var(--u4f-surface); color: var(--u4f-text); }
+.bos-side-head { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.bos-side.is-open .bos-side-head { justify-content: space-between; padding-left: 8px; }
+.bos-side-brand { min-width: 0; display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; color: var(--u4f-text); }
+.bos-side-brand span { font-size: 17px; font-weight: 600; letter-spacing: -.3px; white-space: nowrap; }
+/* 对话收起后浮在左下角，所以收起按钮的图标转成「向下收」 */
+.bos-chat-collapse .bos-chat-toggle-icon, .bos-collapsed-chat .bos-chat-toggle-icon { transform: rotate(-90deg); }
+.bos-rail-dot { position: absolute; top: -1px; right: -1px; width: 8px; height: 8px; border-radius: var(--u4f-radius-full); background: var(--u4f-helm); box-shadow: 0 0 0 2px var(--u4f-background); }
+/* 我的、通知的弹层从左下角向右展开 */
+.bos-side .bos-popover, .bos-side .bos-notices { left: calc(100% + 8px); right: auto; top: auto; bottom: 0; }
+
+/* 侧栏收起时，悬停立刻显示名字 */
+.bos-side-tip { position: fixed; z-index: 40; transform: translateY(-50%); pointer-events: none; padding: 5px 10px; border-radius: 8px; background: var(--u4f-primary); color: var(--u4f-on-primary); font-size: 12px; white-space: nowrap; box-shadow: var(--u4f-shadow-raised); }
+
+/* 对话面板底部的输入框 */
+.bos-chat > .bos-input { flex: 0 0 auto; margin: 0 10px 10px; padding: 6px 6px 6px 16px; border-radius: 18px; box-shadow: none; }
+
+/* 对话收起后，展开按钮浮在面板左下角 */
+.bos-panel > .bos-collapsed-chat { position: absolute; left: 12px; bottom: 12px; z-index: 6; width: 230px; height: 56px; box-shadow: var(--u4f-shadow-raised); }
