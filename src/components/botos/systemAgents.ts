@@ -2,7 +2,7 @@
 // 原型按关键词理解意图，直接修改右侧面板对应的数据；之后可以换成由模型理解并调用工具。
 
 import { botosReducer, isAgent, uid, type BotosState, type SystemRole } from './botModel';
-import { isInstalled, marketCatalog, type ExpertItem, type TeamItem } from './marketCatalog';
+import { availableDefinitions } from './expertDefinitions';
 
 export interface SystemReply { text: string; state?: BotosState; openCreate?: boolean }
 
@@ -66,11 +66,8 @@ function experts(state: BotosState, text: string): SystemReply {
   }
   if (/新建|创建/.test(text)) return { text: '好的，给它起个名字、选个头像就能开始。', openCreate: true };
   if (/推荐|找|有哪些|市场/.test(text)) {
-    const recs = marketCatalog.filter((i): i is ExpertItem | TeamItem => (i.kind === 'expert' || i.kind === 'team') && !isInstalled(state, i))
-      .sort((a, b) => b.installs - a.installs).slice(0, 3);
-    return { text: recs.length
-      ? `可以看看这几个：${recs.map(r => `「${r.name}」（${r.summary}）`).join('；')}。在右上角头像菜单的「市场」里可以添加，或点左下角「+」在推荐里直接添加。`
-      : '市场里的专家你都添加过了。' };
+    const recs = availableDefinitions(state).sort((a, b) => b.installs - a.installs).slice(0, 3);
+    return { text: `可以看看这几个：${recs.map(r => `「${r.name}」（${r.summary}）`).join('；')}。点击侧栏「新建智能体」，切换到「招募专家」查看。` };
   }
   return { text: '我可以帮你找专家、新建智能体，或把用得好的智能体沉淀为专家。你想做哪件？' };
 }

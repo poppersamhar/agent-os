@@ -3,11 +3,12 @@ import { ArrowLeft, KeyRound, Plus, Search, Trash2, X } from 'lucide-react';
 import { MAIN_BOT_ID, agentLabel, faceStateOf, memberBots, uid, type Bot, type BotosAction, type BotosState, type Mcp, type McpKind, type Skill, type WidgetKind } from './botModel';
 import BotAvatar from './BotAvatar';
 import { findItem } from './marketCatalog';
+import { hasGrant } from './capabilities';
 
 export type HubId = 'bots' | 'skills' | 'mcps';
-interface HubProps { state: BotosState; dispatch: Dispatch<BotosAction>; onOpenBot: (id: string) => void; onClose: () => void; onNewBot: () => void }
+interface HubProps { state: BotosState; dispatch: Dispatch<BotosAction>; onOpenBot: (id: string) => void; onClose: () => void; onNewBot: () => void; onRequestDeletion: (bot: Bot, memoryId?: string) => void }
 
-const usedBy = (state: BotosState, key: 'skillIds' | 'mcpIds', id: string) => state.bots.filter(b => b[key].includes(id));
+const usedBy = (state: BotosState, key: 'skillIds' | 'mcpIds', id: string) => state.bots.filter(b => hasGrant(b, key === 'skillIds' ? 'skill' : 'mcp', id));
 
 function HubFrame({ title, subtitle, onClose, action, children }: { title: string; subtitle: string; onClose: () => void; action?: ReactNode; children: ReactNode }) {
   return <section className="bos-hub" aria-label={title}>
@@ -27,13 +28,12 @@ function useQuery() {
 
 // ───────────────────────── 专家管理 ─────────────────────────
 
-function BotDetail({ bot, state, dispatch, onBack, onOpenBot }: { bot: Bot; state: BotosState; dispatch: Dispatch<BotosAction>; onBack: () => void; onOpenBot: (id: string) => void }) {
+function BotDetail({ bot, state, onBack, onOpenBot, onRequestDeletion }: { bot: Bot; state: BotosState; onBack: () => void; onOpenBot: (id: string) => void; onRequestDeletion: HubProps['onRequestDeletion'] }) {
   const isMain = bot.kind === 'main';
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const skills = bot.skillIds.map(id => state.skills.find(s => s.id === id)).filter((s): s is Skill => !!s);
   const mcps = bot.mcpIds.map(id => state.mcps.find(m => m.id === id)).filter((m): m is Mcp => !!m);
   const members = memberBots(state, bot);
-  const source = bot.sourceId ? findItem(bot.sourceId) : undefined;
+  const source = bot.sourceId ? findItem(bot.sourceId, state) : undefined;
   return <div className="bos-detail">
     <button type="button" className="bos-back" onClick={onBack}><ArrowLeft size={14} />全部智能体</button>
     <div className="bos-detail-title"><BotAvatar bot={bot} size={44} state={faceStateOf(state, bot)} members={members} /><div><h2>{bot.name}</h2><p>{isMain ? '企业效能管理智能体 · 统一管理全部专家与能力' : bot.kind === 'group' ? `专家团 · ${members.length} 个成员` : `专家 · 创建于 ${bot.createdAt}`}</p></div>
@@ -54,17 +54,13 @@ function BotDetail({ bot, state, dispatch, onBack, onOpenBot }: { bot: Bot; stat
     <h3 className="bos-section-title">记忆 <small>{bot.memory.length} 条 · 可逐条查看与删除</small></h3>
     {bot.memory.length ? <ul className="bos-memory">{bot.memory.map(m => <li key={m.id}>
       <span className={`bos-tag bos-tag--${m.scope}`}>{m.scope === 'team' ? '团队' : '个人'}</span><p>{m.text}</p><small>{m.createdAt}</small>
-      <button type="button" className="bos-icon" aria-label={`删除记忆：${m.text}`} onClick={() => dispatch({ type: 'forget', botId: bot.id, memoryId: m.id })}><X size={13} /></button>
+      <button type="button" className="bos-icon" aria-label={`删除记忆：${m.text}`} onClick={() => onRequestDeletion(bot, m.id)}><X size={13} /></button>
     </li>)}</ul> : <p className="bos-hint">还没有记忆。对话中确认过的偏好与事实会保存在这里。</p>}
-    {isMain ? null : <div className="bos-form-actions">
-      {confirmDelete
-        ? <><span className="bos-warn">删除后对话与记忆无法恢复。</span><button type="button" className="bos-danger" onClick={() => { dispatch({ type: 'delete-bot', id: bot.id }); onBack(); }}>确认删除</button><button type="button" className="bos-secondary" onClick={() => setConfirmDelete(false)}>取消</button></>
-        : <button type="button" className="bos-ghost-danger" onClick={() => setConfirmDelete(true)}><Trash2 size={13} />删除</button>}
-    </div>}
+    {isMain ? null : <div className="bos-form-actions"><button type="button" className="bos-ghost-danger" onClick={() => onRequestDeletion(bot)}><Trash2 size={13} />申请删除</button></div>}
   </div>;
 }
 
-export function BotHub({ state, dispatch, onOpenBot, onClose, onNewBot }: HubProps) {
+export function BotHub({ state, onOpenBot, onClose, onNewBot, onRequestDeletion }: HubProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [q, search] = useQuery();
   const bot = state.bots.find(b => b.id === selected);
@@ -72,7 +68,7 @@ export function BotHub({ state, dispatch, onOpenBot, onClose, onNewBot }: HubPro
     .filter(b => !q || b.name.toLowerCase().includes(q) || b.prompt.toLowerCase().includes(q));
   return <HubFrame title="专家" subtitle="全部智能体，以及沉淀出来的专家与专家团：身份、能力、记忆与工作台" onClose={onClose}
     action={<button type="button" className="bos-primary" onClick={onNewBot}><Plus size={14} />新建智能体</button>}>
-    {bot ? <BotDetail key={bot.id} bot={bot} state={state} dispatch={dispatch} onBack={() => setSelected(null)} onOpenBot={onOpenBot} /> : <>
+    {bot ? <BotDetail key={bot.id} bot={bot} state={state} onRequestDeletion={onRequestDeletion} onBack={() => setSelected(null)} onOpenBot={onOpenBot} /> : <>
       {search}
       <table className="bos-table">
         <thead><tr><th>智能体</th><th>类型</th><th>技能</th><th>连接器</th><th>记忆</th><th>近 7 天运行</th></tr></thead>
@@ -190,8 +186,12 @@ function McpDetail({ mcp, state, dispatch, onBack, onOpenBot }: { mcp: Mcp; stat
       <div><dt>负责人</dt><dd>{mcp.owner}</dd></div><div><dt>调用</dt><dd>{mcp.calls}</dd></div>
       <div><dt>工具</dt><dd>{mcp.tools.join('、') || '—'}</dd></div>
     </dl>
-    <h3 className="bos-section-title">正在使用的智能体 <small>{mcp.enabled ? '智能体在工作中自己申请或移除连接器' : '停用期间，这些智能体暂时无法使用'}</small></h3>
-    <UsedByList state={state} bots={usedBy(state, 'mcpIds', mcp.id)} onOpenBot={onOpenBot} empty="还没有智能体使用这个连接器。" />
+    <h3 className="bos-section-title">已授权的智能体</h3>
+    <ul className="bos-install">{usedBy(state, 'mcpIds', mcp.id).map(bot => <li className="bos-authorized-row" key={bot.id}>
+      <button type="button" className="bos-row-link" onClick={() => onOpenBot(bot.id)}><span className="bos-row-name"><BotAvatar bot={bot} size={24} />{bot.name}</span></button>
+      <button type="button" className="bos-secondary" onClick={() => dispatch({ type: 'revoke-capability', botId: bot.id, kind: 'mcp', id: mcp.id })}>撤销授权</button>
+    </li>)}</ul>
+    {usedBy(state, 'mcpIds', mcp.id).length ? null : <p className="bos-hint">还没有智能体获得授权。</p>}
   </div>;
 }
 

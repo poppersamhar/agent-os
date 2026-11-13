@@ -2,6 +2,7 @@
 .mk-shell :focus-visible { outline: 2px solid var(--u4f-focus); outline-offset: 2px; }
 :where(.mk-shell) :where(button, input) { font: inherit; color: inherit; }
 :where(.mk-shell) button { cursor: pointer; }
+:where(.mk-shell) button:disabled { cursor: not-allowed; opacity: .4; }
 
 .mk-top { display: flex; align-items: center; gap: 18px; padding: 14px 24px; border-bottom: 1px solid var(--u4f-border); }
 .mk-back { display: inline-flex; align-items: center; gap: 4px; color: var(--u4f-text-muted); text-decoration: none; font-size: 12px; white-space: nowrap; }
@@ -60,10 +61,17 @@
 .mk-deps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .mk-deps button { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: var(--u4f-surface-raised); border-radius: var(--u4f-radius-md); padding: 8px 10px; text-align: left; }
 .mk-deps button:hover { box-shadow: inset 0 0 0 1px var(--u4f-border-strong); }
+.mk-dep-row { display: flex; align-items: center; gap: 10px; border-radius: var(--u4f-radius-md); background: var(--u4f-surface-raised); padding: 8px 10px; }
+.mk-dep-row button { width: auto; }
 .mk-deps .mk-dep-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .mk-deps small { color: var(--u4f-text-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mk-ok { color: var(--u4f-success); flex-shrink: 0; }
-.mk-will { color: var(--u4f-text-muted); flex-shrink: 0; }
+.mk-publication { color: var(--u4f-text-muted); margin: 0; font-weight: 600; }
+.mk-publication--pending { color: var(--u4f-warning); }
+.mk-publication--approved { color: var(--u4f-success); }
+.mk-publication--rejected { color: var(--u4f-danger); }
+.mk-versions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mk-versions li { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; padding: 8px 10px; background: var(--u4f-surface-raised); border-radius: var(--u4f-radius-md); font-size: 12px; }
+.mk-versions time { color: var(--u4f-text-muted); }
 .mk-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .mk-tabs { margin-left: 0; justify-self: start; }
 .mk-code { position: relative; }

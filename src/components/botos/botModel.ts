@@ -3,17 +3,26 @@
 // 技能 / 连接器是账号级共享能力；工作台由专家的 prompt + 已装能力组装为声明式 Spec。
 
 import { MAIN_FACE, RESERVED_FACES, SYSTEM_FACES, faceShapes, isReservedFace, pickFace, type FaceSpec, type FaceState } from './botFaces';
+import { hasGrant, revokeCapability, type CapabilityGrant } from './capabilities';
+import { dashboardTemplates, type DashboardTemplate } from './dashboardTemplates';
+import { applyGovernance, type GovernanceAction } from './governanceActions';
+import type { Approval, AuditRecord } from './governance';
+import type { PersonnelAction, PersonnelResult } from './personnel';
+import type { ExpertPublication } from './expertDefinitions';
+import { runRoutine, seedRoutines, seedWorkspaceFiles, tableActionLabel, tableActionStatus, tableRows, type Routine, type TableAction, type WorkspaceFile } from './workspaceWidgets';
 
 export type WidgetKind =
   | 'waiting' | 'agents' | 'done' | 'runs' | 'artifacts' | 'members'
-  | 'feed' | 'repo' | 'sources' | 'alerts' | 'trend' | 'metrics' | 'checks';
+  | 'feed' | 'repo' | 'sources' | 'alerts' | 'trend' | 'metrics' | 'checks'
+  | 'query-form' | 'audit' | 'action-table' | 'artifact-preview' | 'routines' | 'workspace'
+  | 'capabilities' | 'approvals' | 'health' | 'sensitive-operations';
 
 export type WidgetSource = 'core' | `skill:${string}` | `mcp:${string}`;
 
-export interface WidgetSlot { id: string; kind: WidgetKind; title: string; source: WidgetSource; span: 1 | 2 | 3 }
+export interface WidgetSlot extends WidgetOffer { id: string; source: WidgetSource }
 export interface DashboardSpec { headline: { title: string; subtitle: string }; widgets: WidgetSlot[] }
 
-export interface WidgetOffer { kind: WidgetKind; title: string; span: 1 | 2 | 3 }
+export interface WidgetOffer { kind: WidgetKind; title: string; span: 1 | 2 | 3; action?: 'direct' | 'agent'; tool?: string }
 
 export interface Skill {
   id: string; name: string; description: string; category: string;
@@ -25,6 +34,7 @@ export type McpKind = 'feishu' | 'github' | 'database' | 'web' | 'erp' | 'custom
 export interface Mcp {
   id: string; name: string; kind: McpKind; endpoint: string; tools: string[];
   credential: 'vault' | 'none'; enabled: boolean; owner: string; calls: number;
+  credentialExpiresAt?: number;
   widgets: WidgetOffer[]; createdByUser?: boolean;
 }
 
@@ -34,8 +44,14 @@ export interface BotChoices { question: string; options: string[]; answered?: st
 export interface BotMessage {
   id: string; author: MessageAuthor; name: string; text: string; time: string;
   attachment?: string;
+  at?: number;
   choices?: BotChoices;
+  approvalId?: string;
+  execution?: ExecutionStep[];
+  widgetInput?: { slotId: string; subject: string; reason: string };
 }
+
+export interface ExecutionStep { path: '连接器' | '临时沙箱' | 'KodaX CLI' | 'KodaX Space'; tool: string; durationMs: number }
 
 export interface MemoryItem { id: string; text: string; scope: 'team' | 'personal'; createdAt: string }
 
@@ -53,13 +69,25 @@ export interface Bot {
   createdAt: string;
   /** 从 Agent Market 添加时，记录来源条目 id（如 expert:research）。 */
   sourceId?: string;
+  sourceVersion?: string;
+  requiredMcpIds?: string[];
+  capabilityGrants?: CapabilityGrant[];
+  dashboardTemplate?: DashboardTemplate;
+  widgetOrder?: string[];
+  widgetUpdates?: Record<string, number>;
+  dashboardUpdatedAt?: number;
+  dashboardChange?: { capability: string; titles: string[]; source: WidgetSource };
+  personnelResults?: Partial<Record<PersonnelAction, PersonnelResult>>;
+  routines?: Routine[];
+  tableActions?: Record<string, TableAction>;
+  files?: WorkspaceFile[];
   /** 已沉淀为专家（bot）或专家团（group）：成熟、可复用、可发布到市场。 */
   matured?: boolean;
   /** 系统智能体负责的管理面板。 */
   role?: SystemRole;
 }
 
-export interface PendingTask { id: string; botId: string; request: string }
+export interface PendingTask { id: string; botId: string; request: string; personnel?: PersonnelResult; slotId?: string }
 
 export interface BotosState {
   version: 1;
@@ -70,6 +98,9 @@ export interface BotosState {
   skills: Skill[];
   mcps: Mcp[];
   pending: PendingTask[];
+  approvals: Approval[];
+  audit: AuditRecord[];
+  expertPublications?: ExpertPublication[];
 }
 
 export const MAIN_BOT_ID = 'main';
@@ -108,17 +139,19 @@ export function composeDashboard(bot: Bot, skills: Skill[], mcps: Mcp[]): Dashbo
   if (bot.kind === 'main') {
     return {
       headline: { title: '你好，Samhar', subtitle: '企业效能管理智能体 · 汇总全部智能体的进展、待处理事项与运行记录' },
-      widgets: [core('waiting', '待你处理', 1), core('agents', '你的智能体', 1), core('done', '完成情况', 1), core('runs', '运行记录', 3)],
+      widgets: [core('waiting', '待你处理', 1), core('agents', '你的智能体', 1), core('done', '完成情况', 1),
+        core('approvals', '待我审批', 2), core('health', '能力健康', 1), core('sensitive-operations', '敏感操作', 3), core('runs', '运行记录', 3)],
     };
   }
-  const installedSkills = bot.skillIds.map(id => skills.find(s => s.id === id)).filter((s): s is Skill => !!s);
-  const installedMcps = bot.mcpIds.map(id => mcps.find(m => m.id === id)).filter((m): m is Mcp => !!m && m.enabled);
-  const seen = new Set<WidgetKind>();
+  const installedSkills = skills.filter(s => hasGrant(bot, 'skill', s.id));
+  const installedMcps = mcps.filter(m => m.enabled && hasGrant(bot, 'mcp', m.id));
+  const seen = new Set<string>();
   const contributed: WidgetSlot[] = [];
   const offer = (source: WidgetSource, w: WidgetOffer) => {
-    if (seen.has(w.kind)) return;
-    seen.add(w.kind);
-    contributed.push({ id: `${source}:${w.kind}`, kind: w.kind, title: w.title, source, span: w.span });
+    const key = w.action ? `${w.kind}:${w.action}` : w.kind === 'action-table' ? `${source}:${w.kind}` : w.kind;
+    if (seen.has(key)) return;
+    seen.add(key);
+    contributed.push({ ...w, id: `${source}:${w.kind}${w.action ? `:${w.action}` : ''}`, source });
   };
   // prompt 提到的能力优先：名称出现在 prompt 中的技能 / 连接器排在前面。
   const mentioned = <T extends { name: string }>(items: T[]) => [...items].sort((a, b) => Number(bot.prompt.includes(b.name)) - Number(bot.prompt.includes(a.name)));
@@ -128,7 +161,12 @@ export function composeDashboard(bot: Bot, skills: Skill[], mcps: Mcp[]): Dashbo
   const widgets: WidgetSlot[] = [core('waiting', '待你处理', 1)];
   if (bot.kind === 'group') widgets.push(core('members', '成员', 2));
   widgets.push(...contributed);
-  widgets.push(core('runs', '运行记录', 2), core('artifacts', '最近成果', 1));
+  widgets.push(core('runs', '运行记录', 2), core('artifacts', '最近成果', 1), core('artifact-preview', '成果预览', 2),
+    core('routines', 'Routine', 3), core('workspace', '托管工作区', 3), core('capabilities', '能力与授权', 3));
+  const priority = bot.dashboardTemplate ? dashboardTemplates[bot.dashboardTemplate]?.priority ?? [] : [];
+  const rank = <T,>(values: T[], key: T) => values.includes(key) ? values.indexOf(key) : values.length;
+  widgets.sort((a, b) => rank(bot.widgetOrder ?? [], a.id) - rank(bot.widgetOrder ?? [], b.id)
+    || rank(priority, a.kind) - rank(priority, b.kind));
 
   const capability = `${installedSkills.length} 个技能 · ${installedMcps.length} 个连接器`;
   const role = firstSentence(bot.prompt);
@@ -221,12 +259,13 @@ export function assignFaces<T extends Omit<Bot, 'face'> & { face?: unknown }>(bo
 // ───────────────────────── Reducer ─────────────────────────
 
 export type BotosAction =
+  | GovernanceAction
   | { type: 'select'; id: string }
   | { type: 'send'; botId: string; message: BotMessage; task: PendingTask }
   | { type: 'reply'; botId: string; messages: BotMessage[] }
   | { type: 'complete'; taskId: string; messages: BotMessage[]; memory?: MemoryItem; needsYou?: boolean }
   | { type: 'create-bot'; bot: Bot }
-  | { type: 'update-bot'; id: string; patch: Partial<Pick<Bot, 'name' | 'prompt' | 'model' | 'skillIds' | 'mcpIds' | 'memberIds' | 'face'>> }
+  | { type: 'update-bot'; id: string; patch: Partial<Pick<Bot, 'name' | 'prompt' | 'model' | 'skillIds' | 'mcpIds' | 'memberIds' | 'face' | 'sourceVersion' | 'dashboardTemplate' | 'widgetOrder' | 'requiredMcpIds'>> }
   | { type: 'delete-bot'; id: string }
   | { type: 'forget'; botId: string; memoryId: string }
   | { type: 'mature'; id: string }
@@ -234,6 +273,14 @@ export type BotosAction =
   | { type: 'create-skill'; skill: Skill }
   | { type: 'create-mcp'; mcp: Mcp }
   | { type: 'toggle-mcp'; id: string }
+  | { type: 'revoke-capability'; botId: string; kind: CapabilityGrant['kind']; id: string }
+  | { type: 'dashboard-change'; botId: string; undo?: boolean }
+  | { type: 'refresh-widget'; botId: string; id: string; at: number }
+  | { type: 'reorder-widgets'; botId: string; first: string; messages: BotMessage[] }
+  | { type: 'routine-create'; botId: string; routine: Routine; messages: BotMessage[] }
+  | { type: 'routine-toggle'; botId: string; id: string }
+  | { type: 'routine-run'; botId: string; id: string; runId: string; at: number }
+  | { type: 'table-action'; botId: string; source: WidgetSource; rowId: string; action: TableAction; id: string; at: number }
   | { type: 'reset'; state: BotosState };
 
 const mapBot = (state: BotosState, id: string, fn: (bot: Bot) => Bot): Bot[] => state.bots.map(bot => bot.id === id ? fn(bot) : bot);
@@ -242,6 +289,14 @@ const toFront = (state: BotosState, id: string) => state.bots.some(bot => bot.id
 
 export function botosReducer(state: BotosState, action: BotosAction): BotosState {
   switch (action.type) {
+    case 'personnel-run':
+    case 'personnel-complete':
+    case 'request-approval':
+    case 'submit-approval':
+    case 'resolve-approval':
+    case 'expire-approvals':
+    case 'capture-expert':
+      return applyGovernance(state, action);
     case 'select':
       return state.bots.some(bot => bot.id === action.id) ? { ...state, currentId: action.id } : state;
     case 'send':
@@ -275,7 +330,16 @@ export function botosReducer(state: BotosState, action: BotosAction): BotosState
     case 'create-bot':
       return { ...state, bots: [...state.bots, action.bot], order: [action.bot.id, ...state.order], currentId: action.bot.id };
     case 'update-bot':
-      return { ...state, bots: mapBot(state, action.id, bot => ({ ...bot, ...action.patch })) };
+      return { ...state, bots: mapBot(state, action.id, bot => {
+        const next = { ...bot, ...action.patch };
+        for (const skill of state.skills) {
+          if (next.skillIds.includes(skill.id) && !bot.skillIds.includes(skill.id)) return withDashboardChange(state, bot, next, `skill:${skill.id}`, skill.name);
+        }
+        for (const mcp of state.mcps) {
+          if (next.mcpIds.includes(mcp.id) && !bot.mcpIds.includes(mcp.id)) return withDashboardChange(state, bot, next, `mcp:${mcp.id}`, mcp.name);
+        }
+        return next;
+      }) };
     case 'mature':
       return { ...state, bots: mapBot(state, action.id, bot => isAgent(bot) ? { ...bot, matured: true } : bot) };
     case 'delete-bot': {
@@ -296,9 +360,63 @@ export function botosReducer(state: BotosState, action: BotosAction): BotosState
       return { ...state, mcps: [...state.mcps, action.mcp] };
     case 'toggle-mcp':
       return { ...state, mcps: state.mcps.map(mcp => mcp.id === action.id ? { ...mcp, enabled: !mcp.enabled } : mcp) };
+    case 'revoke-capability':
+      return { ...state, bots: mapBot(state, action.botId, bot => revokeCapability(bot, action.kind, action.id)) };
+    case 'dashboard-change':
+      return { ...state, bots: mapBot(state, action.botId, bot => {
+        if (!bot.dashboardChange) return bot;
+        const next = { ...bot, dashboardChange: undefined };
+        const source = bot.dashboardChange.source;
+        if (!action.undo || source === 'core') return next;
+        return source.startsWith('mcp:') ? revokeCapability(next, 'mcp', source.slice(4)) : revokeCapability(next, 'skill', source.slice(6));
+      }) };
+    case 'refresh-widget':
+      return { ...state, bots: mapBot(state, action.botId, bot => ({ ...bot, widgetUpdates: { ...bot.widgetUpdates, [action.id]: action.at } })) };
+    case 'reorder-widgets':
+      return { ...state, bots: mapBot(state, action.botId, bot => ({ ...bot,
+        widgetOrder: [action.first, ...(bot.widgetOrder ?? []).filter(id => id !== action.first)], messages: [...bot.messages, ...action.messages],
+      })) };
+    case 'routine-create':
+      return { ...state, bots: mapBot(state, action.botId, bot => ({ ...bot, routines: [...(bot.routines ?? []), action.routine], messages: [...bot.messages, ...action.messages] })) };
+    case 'routine-toggle':
+      return { ...state, bots: mapBot(state, action.botId, bot => ({ ...bot, routines: bot.routines?.map(routine => routine.id === action.id ? { ...routine, enabled: !routine.enabled } : routine) })) };
+    case 'routine-run':
+      return { ...state, bots: mapBot(state, action.botId, bot => {
+        const routine = bot.routines?.find(item => item.id === action.id);
+        if (!routine || bot.files?.some(file => file.id === action.runId)) return bot;
+        const result = runRoutine(routine, action.at, action.runId);
+        const time = new Date(action.at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        const message: BotMessage = { id: action.runId, at: action.at, attachment: result.artifact.name, author: 'bot', name: bot.name, text: result.text, time,
+          execution: [{ path: '临时沙箱', tool: '生成 Routine 成果', durationMs: 780 }] };
+        return { ...bot, routines: bot.routines?.map(item => item.id === routine.id ? result.routine : item),
+          files: [result.artifact, result.log, ...(bot.files ?? [])], messages: [...bot.messages, message],
+          history: incrementHistory(bot.history), widgetUpdates: { ...bot.widgetUpdates, 'core:routines': action.at, 'core:artifacts': action.at, 'core:workspace': action.at, 'core:runs': action.at } };
+      }) };
+    case 'table-action': {
+      const row = tableRows(action.source).find(item => item.id === action.rowId);
+      if (!row?.actions.includes(action.action)) return state;
+      const time = new Date(action.at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      return { ...state, bots: mapBot(state, action.botId, bot => !bot.tableActions?.[row.id] && composeDashboard(bot, state.skills, state.mcps).widgets.some(widget => widget.kind === 'action-table' && widget.source === action.source) ? ({ ...bot,
+        tableActions: { ...bot.tableActions, [row.id]: action.action },
+        widgetUpdates: { ...bot.widgetUpdates, [`${action.source}:action-table`]: action.at },
+        messages: [...bot.messages, { id: action.id, author: 'source', name: '工作台', time,
+          text: `你在面板对「${row.title}」执行了「${tableActionLabel(action.action)}」。当前状态：${tableActionStatus(action.action)}。` }],
+      }) : bot) };
+    }
     case 'reset':
       return action.state;
   }
+}
+
+export function incrementHistory(history: Bot['history'], needsYou = false): Bot['history'] {
+  return history.map(([auto, needed], index) => index === history.length - 1
+    ? [auto + Number(!needsYou), needed + Number(needsYou)] : [auto, needed]);
+}
+
+export function withDashboardChange(state: BotosState, previous: Bot, next: Bot, source: WidgetSource, capability: string): Bot {
+  const before = new Set(composeDashboard(previous, state.skills, state.mcps).widgets.map(widget => widget.id));
+  const added = composeDashboard(next, state.skills, state.mcps).widgets.filter(widget => widget.source === source && !before.has(widget.id));
+  return added.length ? { ...next, dashboardChange: { capability, titles: added.map(widget => widget.title), source } } : next;
 }
 
 // ───────────────────────── 本地恢复 ─────────────────────────
@@ -313,11 +431,15 @@ export function restoreBotos(raw: string | null, fallback: () => BotosState): Bo
     const restored = value.bots.filter((bot): bot is Bot => !!bot && typeof bot.id === 'string' && Array.isArray(bot.messages) && Array.isArray(bot.history));
     if (!restored.some(bot => bot.id === MAIN_BOT_ID)) return fallback();
     // 旧数据没有系统管理智能体：从示例里补上
-    const seeded = fallback().bots;
+    const defaults = fallback();
+    const savedMcps = value.mcps;
+    const seeded = defaults.bots;
     SYSTEM_AGENTS.forEach(sys => { if (!restored.some(b => b.id === sys.id)) { const b = seeded.find(x => x.id === sys.id); if (b) restored.push(b); } });
     // 旧数据没有沉淀标记：从市场添加的（有来源）和示例里已沉淀的，视为专家 / 专家团
     restored.forEach((b, i) => { if (b.matured === undefined && (b.sourceId || seeded.find(x => x.id === b.id)?.matured)) restored[i] = { ...b, matured: true }; });
-    const bots = assignFaces(restored);
+    const personnelBot = seeded.find(bot => bot.id === 'personnel');
+    if (personnelBot && !restored.some(bot => bot.id === personnelBot.id) && !value.mcps.some(mcp => mcp.id === 'personnel')) restored.push(personnelBot);
+    const bots = assignFaces(restored.map(bot => ({ ...bot, dashboardUpdatedAt: bot.dashboardUpdatedAt ?? Date.now(), routines: bot.routines ?? seedRoutines(bot.id), files: bot.files ?? seedWorkspaceFiles(bot.id) })));
     const ids = new Set(bots.map(bot => bot.id));
     const agentIds = new Set(bots.filter(isAgent).map(bot => bot.id));
     const order = value.order.filter(id => agentIds.has(id));
@@ -325,7 +447,17 @@ export function restoreBotos(raw: string | null, fallback: () => BotosState): Bo
     const pending = Array.isArray(value.pending) ? value.pending.filter(task => ids.has(task?.botId)) : [];
     return {
       version: 1, bots, order, pending,
-      skills: value.skills, mcps: value.mcps,
+      skills: value.skills.map(skill => skill.id === 'risk' && skill.widgets.some(widget => widget.kind === 'alerts')
+        ? { ...skill, widgets: defaults.skills.find(item => item.id === skill.id)?.widgets ?? skill.widgets } : skill),
+      mcps: [...savedMcps.map(mcp => {
+        const seededMcp = defaults.mcps.find(item => item.id === mcp.id);
+        if (mcp.id === 'github' && mcp.widgets.some(widget => widget.kind === 'repo')) return { ...mcp, widgets: seededMcp?.widgets ?? mcp.widgets, tools: seededMcp?.tools ?? mcp.tools };
+        if (mcp.id === 'feishu' && mcp.credentialExpiresAt === undefined) return { ...mcp, credentialExpiresAt: seededMcp?.credentialExpiresAt };
+        return mcp;
+      }), ...defaults.mcps.filter(mcp => mcp.id === 'personnel' && !savedMcps.some(item => item.id === mcp.id))],
+      approvals: Array.isArray(value.approvals) ? value.approvals : defaults.approvals,
+      audit: Array.isArray(value.audit) ? value.audit : [],
+      expertPublications: Array.isArray(value.expertPublications) ? value.expertPublications : [],
       currentId: typeof value.currentId === 'string' && ids.has(value.currentId) ? value.currentId : MAIN_BOT_ID,
     };
   } catch {

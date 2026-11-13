@@ -3,10 +3,12 @@ import { ArrowLeft, Check, Copy, Download, Hexagon, Moon, Plug, Search, Sparkles
 import BotFace, { BotFaceStack } from './BotFace';
 import { BOTOS_STORAGE_KEY, restoreBotos, type BotosState } from './botModel';
 import { seedBotos } from './botosSeed';
+import { publicationStatus, type ExpertPublication } from './expertDefinitions';
 import {
-  findItem, installItem, isInstalled, itemDeps, kindLabels, marketCatalog, marketMcpConfig, mcpConfig, pluginPackage, remoteTools, sourceLabels, teamMembers,
+  findItem, installItem, isInstalled, isRecruitable, itemDeps, kindLabels, marketCatalog, marketMcpConfig, mcpConfig, pluginPackage, publishedDefinitions, recruitItem, remoteTools, sourceLabels, teamMembers, versionHistory,
   type MarketItem, type MarketKind, type MarketSource,
 } from './marketCatalog';
+import RecruitExpertForm from './RecruitExpertForm';
 import './BotWorkspace.css';
 import './AgentMarket.css';
 
@@ -16,13 +18,13 @@ function initialTheme(): Theme {
   try { const saved = localStorage.getItem(THEME_KEY); if (saved === 'light' || saved === 'dark') return saved; } catch { /* 跟随系统 */ }
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
-const loadState = (): BotosState => { try { return restoreBotos(localStorage.getItem(BOTOS_STORAGE_KEY), seedBotos); } catch { return seedBotos(); } };
+const loadState = (fallback = seedBotos): BotosState => { try { return restoreBotos(localStorage.getItem(BOTOS_STORAGE_KEY), fallback); } catch { return fallback(); } };
 
 const kinds: (MarketKind | 'all')[] = ['all', 'expert', 'team', 'skill', 'connector'];
 const kindIntro: Record<MarketKind | 'all', string> = {
-  all: '专家、专家团、技能、连接器都在这里。添加到 AgentOS 即可使用，也可以作为插件接入其他产品。',
-  expert: '有明确职能的专家：带着需要的技能和连接器，添加后就能直接交代工作。',
-  team: '多个专家协作完成一类工作，添加时会一起添加成员专家。',
+  all: '招募专家、专家团，添加技能和连接器，或作为插件接入其他产品。',
+  expert: '从专家定义创建智能体，招募时可以逐个授权连接器。',
+  team: '多个专家协作完成一类工作，每次招募都会创建新的群成员。',
   skill: '可复用的工作方法。专家掌握技能后，就能用这种方法干活。',
   connector: '通过 MCP 协议接入企业系统。凭证由管理员在 Vault 中配置，不会交给专家或第三方。',
 };
@@ -53,14 +55,19 @@ function download(item: MarketItem) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function Detail({ item, state, onInstall, onClose, onOpen }: { item: MarketItem; state: BotosState; onInstall: () => void; onClose: () => void; onOpen: (id: string) => void }) {
+function Detail({ item, state, publication, onInstall, onRecruit, onClose, onOpen }: {
+  item: MarketItem; state: BotosState; publication?: ExpertPublication;
+  onInstall: () => void; onRecruit: () => void; onClose: () => void; onOpen: (id: string) => void;
+}) {
   const [tab, setTab] = useState<'remote' | 'package'>('remote');
   const installed = isInstalled(state, item);
   const deps = itemDeps(item);
-  const depSkills = deps.skillIds.map(id => findItem(`skill:${id}`)).filter((i): i is MarketItem => !!i);
-  const depMcps = deps.mcpIds.map(id => findItem(`connector:${id}`)).filter((i): i is MarketItem => !!i);
+  const dependencies = [...deps.skillIds.map(id => findItem(`skill:${id}`)), ...deps.mcpIds.map(id => findItem(`connector:${id}`))]
+    .filter((i): i is MarketItem => !!i);
   const members = item.kind === 'team' ? teamMembers(item) : [];
-  const needsVault = depMcps.some(m => m.kind === 'connector' && m.mcp.credential === 'vault');
+  const visible = !publication || publication.status === 'approved';
+  const recruitable = isRecruitable(item);
+  const versions = versionHistory(item, state);
   useEffect(() => { const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [onClose]);
   return <aside className="mk-detail" aria-label={`${item.name} 详情`}>
     <header className="mk-detail-head">
@@ -70,21 +77,22 @@ function Detail({ item, state, onInstall, onClose, onOpen }: { item: MarketItem;
     </header>
     <p className="mk-desc">{item.description}</p>
 
-    <div className="mk-actions">
-      {installed
-        ? <a className="bos-secondary mk-installed" href="./"><Check size={14} />已添加 · 去 AgentOS 使用</a>
-        : <button type="button" className="bos-primary" onClick={onInstall}>添加到 AgentOS</button>}
-      <span className="mk-hint">{installed ? '' : item.kind === 'team' ? `会同时添加 ${members.length} 位成员专家${depSkills.length + depMcps.length ? '及所需的技能、连接器' : ''}` : depSkills.length + depMcps.length > (item.kind === 'expert' ? 0 : 1) ? '所需的技能、连接器会一起添加' : ''}</span>
-    </div>
-    {needsVault ? <p className="mk-note">包含需要凭证的连接器。正式使用时由企业管理员审批并配置凭证；原型里直接添加。</p> : null}
+    {publication ? <p className={`mk-publication mk-publication--${publication.status}`}>{publicationStatus[publication.status]}</p> : null}
+    {visible ? <div className="mk-actions">
+      {recruitable ? <button type="button" className="bos-primary" onClick={onRecruit}>招募到 AgentOS</button>
+        : installed ? <a className="bos-secondary mk-installed" href="./"><Check size={14} />已添加 · 去 AgentOS 使用</a>
+          : <button type="button" className="bos-primary" onClick={onInstall}>添加到 AgentOS</button>}
+    </div> : null}
 
-    {members.length ? <section className="mk-section"><h3>成员专家</h3><ul className="mk-deps">{members.map(m => <li key={m.id}><button type="button" onClick={() => onOpen(m.id)}><BotFace face={m.face} size={26} /><span className="mk-dep-text">{m.name}<small>{m.summary}</small></span>{isInstalled(state, m) ? <Check size={14} className="mk-ok" /> : null}</button></li>)}</ul></section> : null}
-    {item.kind !== 'skill' && item.kind !== 'connector' && (depSkills.length || depMcps.length) ? <section className="mk-section"><h3>需要的能力</h3><ul className="mk-deps">
-      {[...depSkills, ...depMcps].map(d => <li key={d.id}><button type="button" onClick={() => onOpen(d.id)}><ItemIcon item={d} size={26} /><span className="mk-dep-text">{d.name}<small>{kindLabels[d.kind]}</small></span>{isInstalled(state, d) ? <Check size={14} className="mk-ok" /> : <small className="mk-will">将添加</small>}</button></li>)}
+    {members.length ? <section className="mk-section"><h3>成员专家</h3><ul className="mk-deps">{members.map(m => <li key={m.id}><div className="mk-dep-row"><BotFace face={m.face} size={26} /><span className="mk-dep-text">{m.name}<small>{m.summary}</small></span>{findItem(m.id, state) ? <button type="button" className="bos-secondary" onClick={() => onOpen(m.id)}>查看</button> : null}</div></li>)}</ul></section> : null}
+    {recruitable && dependencies.length > 0 ? <section className="mk-section"><h3>需要的能力</h3><ul className="mk-deps">
+      {dependencies.map(d => <li key={d.id}><button type="button" onClick={() => onOpen(d.id)}><ItemIcon item={d} size={26} /><span className="mk-dep-text">{d.name}<small>{kindLabels[d.kind]}</small></span></button></li>)}
     </ul></section> : null}
     {item.kind === 'connector' ? <section className="mk-section"><h3>工具</h3><div className="mk-chips">{item.mcp.tools.map(t => <span key={t} className="mk-tag">{t}</span>)}</div></section> : null}
 
-    <section className="mk-section">
+    <section className="mk-section"><h3>版本历史</h3><ol className="mk-versions">{versions.map(v => <li key={v.version}><strong>v{v.version}</strong><span>{v.notes}</span><time>{v.updatedAt}</time></li>)}</ol></section>
+
+    {visible ? <section className="mk-section">
       <h3>接入其他产品</h3>
       <p className="mk-hint">作为插件接入任意支持 MCP 的 Agent 或产品。</p>
       <div className="bos-segment mk-tabs" role="tablist" aria-label="接入方式">
@@ -100,7 +108,7 @@ function Detail({ item, state, onInstall, onClose, onOpen }: { item: MarketItem;
         <button type="button" className="bos-secondary" onClick={() => download(item)}><Download size={14} />下载 {pluginPackage(item).filename}</button>
       </>}
       <p className="mk-note">原型中的地址与令牌仅为示例。</p>
-    </section>
+    </section> : null}
 
     <dl className="mk-facts">
       <div><dt>负责人</dt><dd>{item.owner}</dd></div><div><dt>版本</dt><dd>v{item.version}</dd></div>
@@ -116,9 +124,10 @@ export default function AgentMarket() {
     const k = new URLSearchParams(window.location.search).get('kind');
     return k && (kinds as string[]).includes(k) ? k as MarketKind : 'all';
   });
-  const [source, setSource] = useState<MarketSource | 'all'>('all');
+  const [source, setSource] = useState<MarketSource | 'all'>(() => new URLSearchParams(window.location.search).get('source') === 'mine' ? 'mine' : 'all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [recruiting, setRecruiting] = useState(false);
   const [marketMcpOpen, setMarketMcpOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -127,16 +136,20 @@ export default function AgentMarket() {
   const toggleTheme = () => setTheme(t => { const next = t === 'dark' ? 'light' : 'dark'; try { localStorage.setItem(THEME_KEY, next); } catch { /* 仅本次生效 */ } return next; });
 
   const q = query.trim().toLowerCase();
-  const list = useMemo(() => marketCatalog.filter(item => (kind === 'all' || item.kind === kind) && (source === 'all' || item.source === source)
-    && (!q || `${item.name}${item.summary}${item.tags.join('')}${item.owner}`.toLowerCase().includes(q))), [kind, source, q]);
-  const counts = useMemo(() => Object.fromEntries(kinds.map(k => [k, marketCatalog.filter(i => k === 'all' || i.kind === k).length])), []);
-  const selected = selectedId ? findItem(selectedId) : undefined;
+  const catalog = useMemo(() => [...marketCatalog, ...publishedDefinitions(state)], [state]);
+  const publications = useMemo(() => (state.expertPublications ?? []).filter(entry => entry.status !== 'draft'), [state]);
+  const matches = (item: MarketItem) => (kind === 'all' || item.kind === kind) && (!q || `${item.name}${item.summary}${item.tags.join('')}${item.owner}`.toLowerCase().includes(q));
+  const list = catalog.filter(item => matches(item) && (source === 'all' || item.source === source || (source === 'org' && isRecruitable(item) && item.source === 'mine'))
+    && (source !== 'mine' || !publications.some(entry => entry.definition.id === item.id)));
+  const mine = source === 'mine' ? publications.filter(entry => matches(entry.definition)) : [];
+  const counts = Object.fromEntries(kinds.map(k => [k, catalog.filter(i => k === 'all' || i.kind === k).length]));
+  const selectedPublication = publications.find(entry => entry.id === selectedId);
+  const selected = selectedPublication?.definition ?? (selectedId ? findItem(selectedId, state) : undefined);
 
-  const install = (item: MarketItem) => {
-    const next = installItem(state, item);
+  const save = (next: BotosState, message: string) => {
     try { localStorage.setItem(BOTOS_STORAGE_KEY, JSON.stringify(next)); } catch { /* 无法保存时只更新本页 */ }
     setState(next);
-    setToast(`已添加「${item.name}」到 AgentOS`);
+    setToast(message);
     window.setTimeout(() => setToast(null), 2400);
   };
 
@@ -164,18 +177,34 @@ export default function AgentMarket() {
 
       <main className="mk-main">
         <header className="mk-main-head"><h1>{kind === 'all' ? 'Agent Market' : kindLabels[kind]}</h1><p>{kindIntro[kind]}</p></header>
-        {list.length ? <div className="mk-grid">{list.map(item => {
-          const installed = isInstalled(state, item);
-          return <button type="button" key={item.id} className={`mk-card${selectedId === item.id ? ' is-selected' : ''}`} onClick={() => setSelectedId(item.id)}>
+        {list.length || mine.length ? <div className="mk-grid">{[...mine.map(entry => ({ item: entry.definition, publication: entry })), ...list.map(item => ({ item, publication: undefined }))].map(({ item, publication }) => {
+          const installed = !isRecruitable(item) && isInstalled(state, item);
+          const id = publication?.id ?? item.id;
+          return <button type="button" key={id} className={`mk-card${selectedId === id ? ' is-selected' : ''}`} onClick={() => setSelectedId(id)}>
             <header><ItemIcon item={item} size={40} /><div><strong>{item.name}</strong><span><span className="mk-tag">{kindLabels[item.kind]}</span><span className={`mk-tag mk-tag--${item.source}`}>{sourceLabels[item.source]}</span></span></div></header>
             <p>{item.summary}</p>
-            <footer><span>{item.owner}</span><span>{item.installs.toLocaleString()} 次添加</span>{installed ? <span className="mk-added"><Check size={12} />已添加</span> : null}</footer>
+            <footer><span>{item.owner}</span>{publication ? <><span>v{item.version}</span><span className={`mk-publication mk-publication--${publication.status}`}>{publicationStatus[publication.status]}</span></> : <span>{item.installs.toLocaleString()} 次{isRecruitable(item) ? '招募' : '添加'}</span>}{installed ? <span className="mk-added"><Check size={12} />已添加</span> : null}</footer>
           </button>;
         })}</div> : <p className="mk-empty">{source === 'mine' ? '你还没有发布到市场的内容。之后可以在 AgentOS 里把自己的专家、技能发布到这里。' : '没有找到匹配的内容。'}</p>}
       </main>
 
-      {selected ? <Detail key={selected.id} item={selected} state={state} onInstall={() => install(selected)} onClose={() => setSelectedId(null)} onOpen={setSelectedId} /> : null}
+      {selected ? <Detail key={selectedId} item={selected} state={state} publication={selectedPublication}
+        onInstall={() => save(installItem(loadState(() => state), selected), `已添加「${selected.name}」到 AgentOS`)}
+        onRecruit={() => setRecruiting(true)} onClose={() => setSelectedId(null)} onOpen={setSelectedId} /> : null}
     </div>
+    {recruiting && selected && isRecruitable(selected) ? <div className="bos-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setRecruiting(false); }}>
+      <div className="bos-modal nx-modal" role="dialog" aria-modal="true" aria-label="招募专家" onKeyDown={event => {
+        if (event.key === 'Escape') { event.stopPropagation(); setRecruiting(false); }
+      }}>
+        <header><h2>招募专家</h2><button type="button" className="bos-icon" aria-label="关闭招募" onClick={() => setRecruiting(false)}><X size={16} /></button></header>
+        <RecruitExpertForm key={selectedId} state={state} item={selected} onBack={() => setRecruiting(false)} onRecruit={options => {
+          const next = recruitItem(loadState(() => state), selected, options);
+          const name = next.bots.find(bot => bot.id === next.currentId)?.name ?? selected.name;
+          save(next, `已招募「${name}」到 AgentOS`);
+          setRecruiting(false);
+        }} />
+      </div>
+    </div> : null}
     {toast ? <div className="mk-toast" role="status">{toast}</div> : null}
   </div>;
 }

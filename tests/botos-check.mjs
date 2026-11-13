@@ -25,22 +25,22 @@ const rowsFilled = spec => {
 
 // 主 Bot：汇总型仪表盘
 const main = composeDashboard(bot(MAIN_BOT_ID), state.skills, state.mcps);
-assert.deepEqual(kinds(main), ['waiting', 'agents', 'done', 'runs']);
+assert.deepEqual(kinds(main), ['waiting', 'agents', 'done', 'approvals', 'health', 'sensitive-operations', 'runs']);
 
 // 能力决定仪表盘：数据巡检 Skill 与数据仓库 MCP 都提供 checks，只出现一次
 const data = composeDashboard(bot('data'), state.skills, state.mcps);
-assert.deepEqual(kinds(data), ['waiting', 'trend', 'checks', 'runs', 'artifacts']);
+assert.deepEqual(kinds(data), ['checks', 'trend', 'routines', 'waiting', 'runs', 'artifacts', 'artifact-preview', 'workspace', 'capabilities']);
 assert.equal(data.widgets.find(w => w.kind === 'checks').source, 'skill:inspect');
 assert.ok(rowsFilled(data), 'data bot rows should be filled');
 
 // 安装 GitHub MCP 后仪表盘出现 PR 与 Issue
 const withGithub = composeDashboard({ ...bot('data'), mcpIds: ['warehouse', 'github'] }, state.skills, state.mcps);
-assert.ok(kinds(withGithub).includes('repo'));
+assert.ok(kinds(withGithub).includes('action-table'));
 assert.ok(rowsFilled(withGithub));
 
 // 停用的 MCP 不贡献组件
 const offMcps = state.mcps.map(m => m.id === 'github' ? { ...m, enabled: false } : m);
-assert.ok(!kinds(composeDashboard(bot('research'), state.skills, offMcps)).includes('repo'));
+assert.ok(!kinds(composeDashboard(bot('research'), state.skills, offMcps)).includes('action-table'));
 
 // 群聊有成员组件
 assert.ok(kinds(composeDashboard(bot('brand-team'), state.skills, state.mcps)).includes('members'));
@@ -81,7 +81,7 @@ const { faceStateOf } = await import(new URL('../src/components/botos/botModel.t
 assert.deepEqual(bot(MAIN_BOT_ID).face, { shape: 'hex', color: 'indigo' });
 const regular = state.bots.filter(b => b.kind === 'bot');
 assert.equal(new Set(regular.map(b => `${b.face.shape}:${b.face.color}`)).size, regular.length, 'seed bots should have distinct faces');
-assert.equal(new Set(regular.map(b => b.face.color)).size, regular.length, 'seed bots should have distinct colors');
+assert.equal(new Set(regular.map(b => b.face.color)).size, Math.min(regular.length, 4), 'seed bots should use all available colors');
 const systemShapes = ['hex', 'crowd', 'spark', 'plug'];
 const isMain = f => systemShapes.includes(f.shape);
 assert.ok(state.bots.every(b => b.kind === 'main' || b.kind === 'system' || !isMain(b.face)), 'system shapes are reserved for system agents');

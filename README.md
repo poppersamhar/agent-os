@@ -207,5 +207,6 @@ npm run build
 |---|---|
 | [AgentOS 结构解析](docs/AGENTOS_STRUCTURE.md) | **从这里开始**：12 张结构图，讲清楚每一层、每个流程怎么设计 |
 | [Grok Bot 结构解析](docs/GROK_BOT_ANALYSIS.md) | 设计灵感的完整拆解和来源 |
+| [前端功能与进度](docs/FRONTEND_FEATURES.md) | 17 项前端功能的需求、实现进度和演示入口 |
 | [产品设计 v0.3](docs/PRODUCT_DESIGN_v0.3.md) | v0.3 原型的对象模型、界面结构和 Dashboard Spec |
 | [产品架构与流程](docs/AGENTOS_ARCHITECTURE.md) | 生命周期、Agent Market 与第三方接入 |

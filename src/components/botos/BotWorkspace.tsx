@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type Dis
 import { ArrowUp, Bell, FileText, Hexagon, Moon, Plus, Store, Sun } from 'lucide-react';
 import NoticePanel from './NoticePanel';
 import { useNotices } from './notices';
-import { BOTOS_STORAGE_KEY, MAIN_BOT_ID, SYSTEM_AGENTS, agentLabel, botosReducer, isAgent, faceStateOf, memberBots, nowTime, pendingCount, restoreBotos, uid, type Bot, type BotMessage, type BotosAction, type BotosState, type PendingTask } from './botModel';
+import { BOTOS_STORAGE_KEY, MAIN_BOT_ID, SYSTEM_AGENTS, agentLabel, botosReducer, composeDashboard, isAgent, faceStateOf, memberBots, nowTime, pendingCount, restoreBotos, uid, type Bot, type BotMessage, type BotosAction, type BotosState, type PendingTask, type WidgetSlot } from './botModel';
 import { seedBotos } from './botosSeed';
 import BotAvatar from './BotAvatar';
 import BotDashboard from './BotDashboard';
@@ -14,6 +14,14 @@ import { draftFace, type BotDraft } from './botDraft';
 import { BotHub, McpHub, SkillHub } from './HubPages';
 import { systemReply } from './systemAgents';
 import { useChatSplit } from './useChatSplit';
+import ApprovalCard from './ApprovalCard';
+import { approvalStatus, createApproval, type ApprovalDecision } from './governance';
+import { canUseConnector, hasGrant } from './capabilities';
+import { PERSONNEL_MCP_ID, personnelApproval } from './personnel';
+import { inferDashboardTemplate } from './dashboardTemplates';
+import { routineFromRequest, tableRows } from './workspaceWidgets';
+import { ExecutionSteps } from './AgentWidgets';
+import type { ExpertPublication } from './expertDefinitions';
 import './BotWorkspace.css';
 
 type Theme = 'light' | 'dark';
@@ -27,7 +35,7 @@ function initialTheme(): Theme {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-const reply = (bot: Bot, text: string, extra?: Partial<BotMessage>): BotMessage => ({ id: uid(), author: bot.kind === 'group' ? 'member' : 'bot', name: bot.name, text, time: nowTime(), ...extra });
+const reply = (bot: Bot, text: string, extra?: Partial<BotMessage>): BotMessage => ({ id: uid(), author: bot.kind === 'group' ? 'member' : 'bot', name: bot.name, text, time: nowTime(), at: Date.now(), ...extra });
 
 function deliverable(request: string): string {
   const topic = request.replace(/^(帮我|请|麻烦)?(生成|做|写|整理|准备|制作|分析|看一下|查一下)?(一个|一份|一下)?/, '').replace(/[，。,.!！?？].*$/, '').slice(0, 16) || '工作成果';
@@ -64,17 +72,29 @@ function TaskRunner({ task, state, dispatch, onDone }: { task: PendingTask; stat
       const s = stateRef.current;
       const bot = s.bots.find(b => b.id === task.botId);
       if (!bot) return;
+      if (task.personnel) {
+        dispatch({ type: 'personnel-complete', taskId: task.id, at: Date.now() });
+        onDoneRef.current(task.botId);
+        return;
+      }
       const file = deliverable(task.request);
-      const skills = bot.skillIds.map(id => s.skills.find(k => k.id === id)?.name).filter(Boolean).slice(0, 2);
+      const connector = s.mcps.find(mcp => canUseConnector(s, bot, mcp.id));
+      const execution: BotMessage['execution'] = connector
+        ? [{ path: '连接器', tool: connector.tools[0] ?? connector.name, durationMs: 380 }]
+        : [];
+      if (/本地|员工电脑/.test(task.request)) execution.push({ path: 'KodaX Space', tool: '预览本地处理流程', durationMs: 670 });
+      else if (/代码|运维|修复|构建/.test(task.request)) execution.push({ path: 'KodaX CLI', tool: '生成实现方案', durationMs: 880 });
+      else execution.push({ path: '临时沙箱', tool: '生成工作成果', durationMs: 740 });
+      const skills = bot.skillIds.filter(id => hasGrant(bot, 'skill', id)).map(id => s.skills.find(k => k.id === id)?.name).filter(Boolean).slice(0, 2);
       const messages: BotMessage[] = bot.kind === 'group'
-        ? s.bots.filter(b => bot.memberIds.includes(b.id)).slice(0, 2).map((m, i) => reply(m, i === 0 ? '资料已整理，交给下一位继续。' : `已完成「${task.request}」。`, i === 1 || bot.memberIds.length === 1 ? { attachment: file } : {}))
-        : [reply(bot, `已完成「${task.request}」${skills.length ? `，用到了 ${skills.join('、')}` : ''}。`, { attachment: file })];
+        ? s.bots.filter(b => bot.memberIds.includes(b.id)).slice(0, 2).map((m, i) => reply(m, i === 0 ? '资料已整理，交给下一位继续。' : `已完成「${task.request}」。`, i === 1 || bot.memberIds.length === 1 ? { attachment: file, execution } : {}))
+        : [reply(bot, `已完成「${task.request}」${skills.length ? `，用到了 ${skills.join('、')}` : ''}。`, { attachment: file, execution })];
       dispatch({ type: 'complete', taskId: task.id, messages, needsYou: /确认|审批|发送|发布/.test(task.request),
         memory: /记住|以后|偏好/.test(task.request) ? { id: uid(), text: task.request.replace(/^(请)?记住[：:]?/, ''), scope: 'personal', createdAt: new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }).replace('/', '-') } : undefined });
       onDoneRef.current(task.botId);
-    }, 3200);
+    }, task.personnel ? 650 : 3200);
     return () => window.clearTimeout(timer);
-  }, [task.id, task.botId, task.request, dispatch]);
+  }, [task.id, task.botId, task.request, task.personnel, dispatch]);
   return null;
 }
 
@@ -85,7 +105,7 @@ function ChatPanelIcon() {
   </svg>;
 }
 
-function Conversation({ bot, state, recentlyDone, active, onCollapse, onAnswer, onOther, children }: { bot: Bot; state: BotosState; recentlyDone: string[]; active: boolean; onCollapse: () => void; onAnswer: (messageId: string, answer: string) => void; onOther: () => void; children?: ReactNode }) {
+function Conversation({ bot, state, recentlyDone, active, onCollapse, onAnswer, onOther, onDecide, onSubmitApproval, children }: { bot: Bot; state: BotosState; recentlyDone: string[]; active: boolean; onCollapse: () => void; onAnswer: (messageId: string, answer: string) => void; onOther: () => void; onDecide: (id: string, decision: ApprovalDecision) => void; onSubmitApproval: (id: string) => void; children?: ReactNode }) {
   const end = useRef<HTMLDivElement>(null);
   const working = pendingCount(state, bot.id) > 0;
   useEffect(() => { if (active) end.current?.scrollIntoView({ block: 'end' }); }, [bot.id, bot.messages.length, working, active]);
@@ -97,12 +117,16 @@ function Conversation({ bot, state, recentlyDone, active, onCollapse, onAnswer, 
       </button>
     </header>
     <div className="bos-chat-scroll">
-      {bot.messages.length ? bot.messages.map(m => <article key={m.id} className={`bos-msg bos-msg--${m.author}`}>
+      {bot.messages.length ? bot.messages.map(m => {
+        const approval = m.approvalId ? state.approvals.find(item => item.id === m.approvalId) : undefined;
+        return <article key={m.id} className={`bos-msg bos-msg--${m.author}`}>
         <span className="bos-msg-name">{m.author === 'source' ? <i className="bos-source-dot" /> : null}{m.name}<time>{m.time}</time></span>
-        <p>{m.text}</p>
+        {m.execution?.length ? <ExecutionSteps steps={m.execution} /> : null}
+        {m.text ? <p>{m.text}</p> : null}
+        {approval ? <ApprovalCard approval={approval} onDecide={onDecide} onSubmit={onSubmitApproval} /> : null}
         {m.attachment ? <span className="bos-file"><FileText size={13} />{m.attachment}</span> : null}
         {m.choices ? <ChoiceCard choices={m.choices} onPick={answer => onAnswer(m.id, answer)} onOther={onOther} /> : null}
-      </article>) : <p className="bos-chat-empty">这是 {bot.name} 的第一段对话。说说你想让它做什么。</p>}
+      </article>; }) : <p className="bos-chat-empty">这是 {bot.name} 的第一段对话。说说你想让它做什么。</p>}
       {working ? <article className="bos-msg bos-msg--bot"><span className="bos-msg-name">{bot.name}</span><p className="bos-typing"><i /><i /><i /></p></article> : null}
       <div ref={end} />
     </div>
@@ -135,10 +159,17 @@ export default function BotWorkspace() {
   const [draft, setDraft] = useState('');
   const { panelRef, paneRef, separatorRef, chatOpen, resizing, settling, setChatOpen, separatorProps } = useChatSplit();
   const [creating, setCreating] = useState(false);
+  const [recruitGroup, setRecruitGroup] = useState<string>();
   const [accountOpen, setAccountOpen] = useState(false);
   const [noticesOpen, setNoticesOpen] = useState(false);
   const [notices, setNotices] = useNotices();
-  const unread = notices.filter(n => !n.read).length;
+  const unread = notices.filter(n => !n.read).length + state.approvals.filter(item => item.submittedAt !== undefined && approvalStatus(item) === 'pending').length;
+  useEffect(() => {
+    const deadlines = state.approvals.filter(item => item.submittedAt !== undefined && item.status === 'pending').map(item => item.expiresAt);
+    if (!deadlines.length) return;
+    const timer = window.setTimeout(() => dispatch({ type: 'expire-approvals', at: Date.now() }), Math.min(2147483647, Math.max(0, Math.min(...deadlines) - Date.now())));
+    return () => window.clearTimeout(timer);
+  }, [state.approvals]);
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const toggleTheme = () => setTheme(t => {
     const next = t === 'dark' ? 'light' : 'dark';
@@ -159,7 +190,20 @@ export default function BotWorkspace() {
     window.setTimeout(() => setRecentlyDone(list => list.filter(id => id !== botId)), 4000);
   }, []);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => { try { localStorage.setItem(BOTOS_STORAGE_KEY, JSON.stringify(state)); } catch { /* 浏览器无法保存时继续使用内存状态 */ } }, [state]);
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key !== BOTOS_STORAGE_KEY || !event.newValue || event.newValue !== localStorage.getItem(BOTOS_STORAGE_KEY)) return;
+      dispatch({ type: 'reset', state: restoreBotos(event.newValue, seedBotos) });
+    };
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, []);
+  useEffect(() => {
+    try {
+      const value = JSON.stringify(state);
+      if (localStorage.getItem(BOTOS_STORAGE_KEY) !== value) localStorage.setItem(BOTOS_STORAGE_KEY, value);
+    } catch { /* 浏览器无法保存时继续使用内存状态 */ }
+  }, [state]);
   useEffect(() => { const el = inputRef.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 140)}px`; }, [draft]);
 
   const current = state.bots.find(b => b.id === state.currentId) ?? state.bots[0];
@@ -172,6 +216,21 @@ export default function BotWorkspace() {
   const systemAgents = (['skills', 'connectors', 'experts'] as const).map(role => SYSTEM_AGENTS.find(sys => sys.role === role)).map(sys => state.bots.find(b => b.id === sys?.id)).filter((b): b is Bot => !!b);
 
   const selectBot = (id: string) => { dispatch({ type: 'select', id }); setChatOpen(true); };
+  const onDecide = (id: string, decision: ApprovalDecision) => dispatch({ type: 'resolve-approval', id, decision, at: Date.now() });
+  const onSubmitApproval = (id: string) => dispatch({ type: 'submit-approval', id, at: Date.now() });
+  const requestConnector = (id: string, reason: string, message?: BotMessage) => {
+    const connector = state.mcps.find(item => item.id === id);
+    if (!connector || !connector.enabled || canUseConnector(state, current, id)) return;
+    setChatOpen(true);
+    const approval = createApproval({ id: uid(), botId: current.id, botName: current.name, kind: 'connector-access', targetId: id,
+      title: `申请「${connector.name}」只读权限`, detail: reason, impact: `仅授予 ${current.name}，有效期 30 天` });
+    dispatch({ type: 'request-approval', approval, messages: message ? [message] : undefined });
+  };
+  const askWidget = (slot: WidgetSlot) => {
+    setDraft(`解释一下『${slot.title}』里的${slot.kind === 'metrics' || slot.kind === 'trend' || slot.kind === 'done' ? '数字' : '内容'}`);
+    setChatOpen(true);
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  };
   const send = (preset?: string) => {
     const text = (preset ?? draft).trim();
     if (!text) return;
@@ -193,24 +252,79 @@ export default function BotWorkspace() {
         return;
       }
     }
+    if (isAgent(current)) {
+      const spec = composeDashboard(current, state.skills, state.mcps);
+      if (/放到最上面|移到顶部|放在最上面|置顶/.test(text)) {
+        const widget = spec.widgets.find(slot => text.includes(slot.title));
+        if (widget) {
+          dispatch({ type: 'reorder-widgets', botId: current.id, first: widget.id, messages: [userMessage, reply(current, `已把「${widget.title}」移到工作台顶部。`)] });
+          return;
+        }
+      }
+      const routine = routineFromRequest(text, uid());
+      if (routine) {
+        dispatch({ type: 'routine-create', botId: current.id, routine, messages: [userMessage, reply(current, `已创建 Routine：${routine.name}。`)] });
+        return;
+      }
+      const skill = state.skills.find(item => text.includes(item.name) && /安装|装上|添加|启用/.test(text));
+      if (skill) {
+        if (!hasGrant(current, 'skill', skill.id)) dispatch({ type: 'update-bot', id: current.id, patch: { skillIds: [...new Set([...current.skillIds, skill.id])] } });
+        dispatch({ type: 'reply', botId: current.id, messages: [userMessage, reply(current, `「${skill.name}」已在当前智能体的能力清单中。`)] });
+        return;
+      }
+      const connector = state.mcps.find(item => text.includes(item.name) && /权限|授权|申请|使用|接入|查询/.test(text))
+        ?? (/人员|身份证/.test(text) ? state.mcps.find(item => item.id === PERSONNEL_MCP_ID) : undefined);
+      if (connector && !canUseConnector(state, current, connector.id)) {
+        if (connector.enabled) requestConnector(connector.id, `完成当前任务需要读取「${connector.name}」。`, { ...userMessage, text: text.replace(/\d{17}[\dXx]/g, '[身份证号已隐藏]') });
+        else dispatch({ type: 'reply', botId: current.id, messages: [reply(current, `「${connector.name}」已停用。可以在连接器管理中查看。`)] });
+        return;
+      }
+      if (connector?.id === PERSONNEL_MCP_ID) {
+        dispatch({ type: 'reply', botId: current.id, messages: [reply(current, '请在右侧「人员查询」填写模拟身份证号和查询事由。结果会脱敏，并写入查询记录。')] });
+        return;
+      }
+      if (/发到|发给|发送|发群|发一下|发.*到|发.*群/.test(text) && /群|飞书|钉钉|纪要/.test(text)) {
+        const preferred = /钉钉/.test(text) || (!/飞书/.test(text) && !canUseConnector(state, current, 'feishu') && canUseConnector(state, current, 'dingtalk')) ? 'dingtalk' : 'feishu';
+        const channel = preferred === 'dingtalk' ? '钉钉' : '飞书';
+        if (!canUseConnector(state, current, preferred)) requestConnector(preferred, `发送群聊消息需要先申请${channel}连接器。`, userMessage);
+        else dispatch({ type: 'request-approval', approval: createApproval({ id: uid(), botId: current.id, botName: current.name, kind: 'send-external', targetId: preferred,
+          title: `发送内容到${channel}群聊`, detail: text, impact: '群聊成员可见 · 模拟发送' }), messages: [userMessage] });
+        return;
+      }
+      if (/删除.*(智能体|我自己)|删除自己/.test(text)) {
+        dispatch({ type: 'request-approval', approval: createApproval({ id: uid(), botId: current.id, botName: current.name, kind: 'delete',
+          targetId: current.id, title: `删除「${current.name}」`, detail: '移除这个智能体及其工作区。', impact: '对话、记忆和工作区将被移除' }), messages: [userMessage] });
+        return;
+      }
+    }
     dispatch({ type: 'send', botId: current.id, message: userMessage, task: { id: uid(), botId: current.id, request: text } });
   };
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } };
   const create = (d: BotDraft) => {
     const id = `bot-${uid().slice(0, 8)}`;
     dispatch({ type: 'create-bot', bot: { id, name: d.name.trim(), kind: d.kind, face: draftFace(d, state), prompt: d.prompt.trim(), model: d.model, skillIds: d.skillIds, mcpIds: d.mcpIds, memberIds: d.memberIds,
+      dashboardTemplate: inferDashboardTemplate(d.name, d.prompt, d.mcpIds), dashboardUpdatedAt: Date.now(),
       memory: [], history: Array.from({ length: 56 }, () => [0, 0] as [number, number]), createdAt: new Date().toLocaleDateString('zh-CN'),
       messages: [openingMessage(d.name.trim(), d.prompt.trim(), d.kind === 'group' ? 'member' : 'bot')] } });
     setCreating(false); setChatOpen(true);
     window.setTimeout(() => inputRef.current?.focus(), 0);
   };
-  const mature = (bot: Bot, publish: boolean) => {
-    const target = bot.kind === 'group' ? '专家团' : '专家';
-    dispatch({ type: 'mature', id: bot.id });
-    dispatch({ type: 'reply', botId: bot.id, messages: [reply(bot, `我已沉淀为${target}。以后可以在「专家」里找到我${publish ? '；发布到企业市场的申请已提交，审批结果会出现在通知里' : ''}。`)] });
-    if (publish) setNotices([{ id: uid(), kind: 'submitted', title: `「${bot.name}」已提交审批`, detail: `沉淀为${target}，申请发布到企业市场，等待管理员审批。`, time: '刚刚', read: false }, ...notices]);
+  const capture = (publication: ExpertPublication, prompt: string) => {
+    const target = current.kind === 'group' ? '专家团' : '专家';
+    const pending = publication.status === 'pending';
+    const approval = pending ? createApproval({ id: uid(), botId: current.id, botName: current.name, kind: 'publish', targetId: publication.id,
+      title: `发布${target}「${current.name}」`, detail: `申请将「${current.name}」的定义发布到企业市场。`, impact: '企业成员可以招募该定义' }) : undefined;
+    dispatch({ type: 'capture-expert', publication, prompt, approval,
+      message: reply(current, `我已沉淀为${target}。${pending ? '发布申请已提交，可在通知和首页查看审批进度。' : '你可以在「招募专家」中复用这个定义。'}`) });
   };
-  const hubProps = { state, dispatch, onOpenBot: selectBot, onClose: () => selectBot(MAIN_BOT_ID), onNewBot: () => setCreating(true) };
+  const closeCreate = () => { setCreating(false); setRecruitGroup(undefined); };
+  const hubProps = { state, dispatch, onOpenBot: selectBot, onClose: () => selectBot(MAIN_BOT_ID), onNewBot: () => setCreating(true), onRequestDeletion: (bot: Bot, memoryId?: string) => {
+    dispatch({ type: 'request-approval', approval: createApproval({ id: uid(), botId: bot.id, botName: bot.name,
+      kind: memoryId ? 'delete-memory' : 'delete', targetId: memoryId ?? bot.id,
+      title: memoryId ? '删除一条记忆' : `删除「${bot.name}」`, detail: memoryId ? '移除选中的记忆。' : '移除这个智能体。',
+      impact: memoryId ? '这条记忆将被永久移除' : '对话、记忆和工作区将被移除' }) });
+    selectBot(bot.id);
+  } };
 
   return <div className={`bos-shell kdx-theme${sideOpen ? ' has-side-open' : ''}`} data-theme={theme}>
     {state.pending.map(task => <TaskRunner key={task.id} task={task} state={state} dispatch={dispatch} onDone={markDone} />)}
@@ -250,10 +364,10 @@ export default function BotWorkspace() {
         {accountOpen ? <div className="bos-popover" role="menu">
           <strong>Samhar</strong><p>交互原型 · 数据保存在本地，智能体回复为模拟。</p>
           <a role="menuitem" className="bos-menu-market" href="?view=market"><Store size={15} /><span><strong>市场</strong><small>Agent Market · 专家、专家团、技能、连接器</small></span></a>
-          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'reset', state: seedBotos() }); setAccountOpen(false); }}>重置演示数据</button>
+          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'reset', state: { ...seedBotos(), audit: state.audit } }); setAccountOpen(false); }}>重置演示数据</button>
           <a role="menuitem" href="?view=avatars">智能体头像样稿</a>
         </div> : null}
-        {noticesOpen ? <NoticePanel notices={notices} onChange={setNotices} onClose={() => setNoticesOpen(false)} /> : null}
+        {noticesOpen ? <NoticePanel notices={notices} approvals={state.approvals} onDecide={onDecide} onChange={setNotices} onClose={() => setNoticesOpen(false)} /> : null}
       </div>
     </aside>
     {tip ? <div className="bos-side-tip" role="tooltip" style={{ top: tip.top, left: tip.left }}>{tip.text}</div> : null}
@@ -262,7 +376,7 @@ export default function BotWorkspace() {
       <div ref={paneRef} id="bos-conversation" className="bos-chat-pane" inert={!chatOpen && !resizing} aria-hidden={!chatOpen && !resizing}>
         <Conversation bot={current} state={state} recentlyDone={recentlyDone} active={chatOpen || resizing} onCollapse={() => setChatOpen(false)}
           onAnswer={(messageId, answer) => { dispatch({ type: 'answer', botId: current.id, messageId, answer }); send(answer); }}
-          onOther={() => inputRef.current?.focus()}>
+          onOther={() => inputRef.current?.focus()} onDecide={onDecide} onSubmitApproval={onSubmitApproval}>
           {/* 输入框放在对话面板底部 */}
           <div className="bos-input">
             <textarea ref={inputRef} rows={1} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onKeyDown}
@@ -278,14 +392,39 @@ export default function BotWorkspace() {
         {sysRole === 'experts' ? <BotHub {...hubProps} />
           : sysRole === 'skills' ? <SkillHub {...hubProps} />
             : sysRole === 'connectors' ? <McpHub {...hubProps} />
-              : <BotDashboard state={state} bot={current} recentlyDone={recentlyDone} faceState={faceStateOf(state, current, recentlyDone)} onSelectBot={selectBot} onMature={publish => mature(current, publish)} />}
+              : <BotDashboard key={current.id} state={state} bot={current} recentlyDone={recentlyDone} faceState={faceStateOf(state, current, recentlyDone)} onSelectBot={selectBot}
+                onAsk={askWidget} onRefresh={slot => dispatch({ type: 'refresh-widget', botId: current.id, id: slot.id, at: Date.now() })}
+                onDashboardChange={undo => dispatch({ type: 'dashboard-change', botId: current.id, undo })}
+                onDecide={onDecide} onRequestConnector={id => requestConnector(id, '使用工作台能力需要读取该连接器的数据。')}
+                onPersonnel={(slot, mode, input) => {
+                  setChatOpen(true);
+                  dispatch({ type: 'personnel-run', botId: current.id, mode, input, id: uid(), slotId: slot.id, at: Date.now() });
+                }}
+                onReveal={id => {
+                  const result = Object.values(current.personnelResults ?? {}).find(item => item.id === id);
+                  if (!result || !canUseConnector(state, current, PERSONNEL_MCP_ID)) return;
+                  const approval = personnelApproval(result, current, uid());
+                  if (!approval) return;
+                  setChatOpen(true);
+                  dispatch({ type: 'request-approval', approval });
+                }}
+                onRoutineToggle={id => dispatch({ type: 'routine-toggle', botId: current.id, id })}
+                onRoutineRun={id => { setChatOpen(true); dispatch({ type: 'routine-run', botId: current.id, id, runId: uid(), at: Date.now() }); }}
+                onTableAction={(source, rowId, action) => {
+                  setChatOpen(true);
+                  dispatch({ type: 'table-action', botId: current.id, source, rowId, action, id: uid(), at: Date.now() });
+                  const row = tableRows(source).find(item => item.id === rowId);
+                  if (row && action === 'delegate') send(`请跟进「${row.title}」并给出建议`);
+                }}
+                onGroupRecruit={() => { setRecruitGroup(current.id); setCreating(true); }}
+                onCapture={capture} onApplyDefinition={next => dispatch({ type: 'reset', state: next })} />}
       </div>
       {!chatOpen ? <button type="button" className="bos-collapsed-chat" onClick={() => setChatOpen(true)} aria-label={`展开 ${current.name} 的对话`}>
-        <ChatPanelIcon /><span><strong>{current.name}</strong>{lastMessage ? <small>{lastMessage.text}</small> : null}</span>
+        <ChatPanelIcon /><span><strong>{current.name}</strong>{lastMessage ? <small>{(lastMessage.text || (lastMessage.approvalId ? '审批卡' : ''))}</small> : null}</span>
       </button> : null}
     </main>
 
-    {creating ? <NewExpertDialog state={state} onClose={() => setCreating(false)} onCreate={create}
-      onInstall={next => { dispatch({ type: 'reset', state: next }); setCreating(false); setChatOpen(true); }} /> : null}
+    {creating ? <NewExpertDialog state={state} groupId={recruitGroup} onClose={closeCreate} onCreate={create}
+      onInstall={next => { dispatch({ type: 'reset', state: next }); closeCreate(); setChatOpen(true); }} /> : null}
   </div>;
 }

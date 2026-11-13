@@ -11,9 +11,10 @@ registerHooks({
   },
 });
 
-const { marketCatalog, findItem, installItem, isInstalled, itemDeps, teamMembers, mcpConfig, pluginPackage } = await import(new URL('../src/components/botos/marketCatalog.ts', import.meta.url));
+const { marketCatalog, findItem, installItem, recruitItem, definitionUpdate, applyDefinitionUpdate, isInstalled, itemDeps, teamMembers, mcpConfig, pluginPackage, publishedDefinitions, versionHistory } = await import(new URL('../src/components/botos/marketCatalog.ts', import.meta.url));
 const { seedBotos } = await import(new URL('../src/components/botos/botosSeed.ts', import.meta.url));
-const { MAIN_BOT_ID } = await import(new URL('../src/components/botos/botModel.ts', import.meta.url));
+const { availableDefinitions, createPublication, sensitivePromptFields } = await import(new URL('../src/components/botos/expertDefinitions.ts', import.meta.url));
+const { MAIN_BOT_ID, composeDashboard } = await import(new URL('../src/components/botos/botModel.ts', import.meta.url));
 
 // 目录完整：id 唯一；专家 / 专家团引用的 Skill、MCP、成员都存在
 assert.equal(new Set(marketCatalog.map(i => i.id)).size, marketCatalog.length, 'ids are unique');
@@ -30,25 +31,38 @@ assert.ok(experts.every(e => !['hex', 'crowd', 'spark', 'plug'].includes(e.face.
 // 添加专家：带上缺的 Skill / MCP，生成带 sourceId 的 Bot，并成为当前 Bot
 const base = seedBotos();
 const contract = findItem('expert:contract');
-const s1 = installItem(base, contract);
+const s1 = recruitItem(base, contract, { approvedMcpIds: ['contracts-db'] });
 const bot = s1.bots.find(b => b.sourceId === 'expert:contract');
 assert.ok(bot && bot.kind === 'bot');
 assert.equal(s1.currentId, bot.id);
 assert.ok(s1.skills.some(s => s.id === 'contract') && s1.mcps.some(m => m.id === 'contracts-db'), 'deps installed');
 assert.ok(isInstalled(s1, contract));
-assert.equal(installItem(s1, contract), s1, 'installing twice is a no-op');
+assert.deepEqual(bot.mcpIds, ['contracts-db'], 'only selected connectors are granted');
+const repeat = recruitItem(s1, contract);
+const second = repeat.bots.find(b => b.id === repeat.currentId);
+assert.equal(second.name, '合同审查专家 2');
+assert.notEqual(second.id, bot.id);
+assert.deepEqual(second.memory, []);
+assert.deepEqual(second.mcpIds, []);
+assert.deepEqual(second.requiredMcpIds, ['contracts-db']);
+assert.match(second.messages[0].text, /从「合同审查专家」招募来的，记忆从空开始/);
 
-// 添加专家团：成员专家复用已添加的，缺的新建；群聊引用成员
+// 添加专家团：群成员是从定义重新创建的独立实例。
 const legal = findItem('team:legal');
 const s2 = installItem(s1, legal);
 const group = s2.bots.find(b => b.sourceId === 'team:legal');
 assert.equal(group.kind, 'group');
 assert.equal(group.memberIds.length, 2);
-assert.ok(group.memberIds.includes(bot.id), 'reuses the contract expert already added');
-assert.equal(s2.bots.filter(b => b.sourceId === 'expert:contract').length, 1, 'no duplicate member');
+assert.ok(!group.memberIds.includes(bot.id), 'creates a new member without sharing the existing instance');
+assert.equal(s2.bots.filter(b => b.sourceId === 'expert:contract').length, 2);
 assert.ok(s2.bots.some(b => b.sourceId === 'expert:minutes'), 'adds missing member');
 assert.ok(s2.mcps.some(m => m.id === 'dingtalk'), 'member deps installed');
 assert.ok(!s2.order.includes(MAIN_BOT_ID));
+const recruitedToGroup = recruitItem(s2, contract, { groupId: group.id, name: '群里的合同助手' });
+assert.equal(recruitedToGroup.currentId, group.id);
+const member = recruitedToGroup.bots.find(b => b.name === '群里的合同助手');
+assert.ok(recruitedToGroup.bots.find(b => b.id === group.id).memberIds.includes(member.id));
+assert.deepEqual(member.memory, []);
 
 // 添加 Skill / MCP 只加能力，不建 Bot
 const s3 = installItem(base, findItem('skill:minutes'));
@@ -74,5 +88,39 @@ assert.ok(firstTask('客服质检专家').choices.options.some(o => o.includes('
 assert.equal(firstTask('随便起个名').choices.options.length, 3, 'fallback options');
 const answered = botosReducer(s1, { type: 'answer', botId: bot.id, messageId: opening.id, answer: opening.choices.options[0] });
 assert.equal(answered.bots.find(b => b.id === bot.id).messages[0].choices.answered, opening.choices.options[0]);
+
+// 沉淀只复制定义。待审批定义不能出现在企业市场。
+const research = base.bots.find(b => b.id === 'research');
+const opts = { publish: true, prompt: research.prompt, panelWidgets: composeDashboard(research, base.skills, base.mcps).widgets,
+  routineTemplates: [{ name: '每日简报', trigger: '每天 09:00', enabled: true, id: 'old', lastRunAt: 10 }] };
+assert.deepEqual(sensitivePromptFields('测试手机号 138 0000 0000 和身份证号 33010119900101001X'), ['身份证号', '手机号']);
+assert.equal(createPublication(base, research, { ...opts, prompt: '联系 13800000000' }), undefined);
+const publication = createPublication(base, research, opts);
+assert.equal(publication.status, 'pending');
+for (const field of ['memory', 'messages', 'history', 'files', 'capabilityGrants']) assert.ok(!(field in publication.definition));
+assert.deepEqual(publication.definition.routineTemplates, [{ name: '每日简报', trigger: '每天 09:00', enabled: true }]);
+assert.deepEqual(publishedDefinitions({ ...base, expertPublications: [publication] }), []);
+const published = { ...base, expertPublications: [{ ...publication, status: 'approved' }] };
+assert.equal(publishedDefinitions(published)[0].id, publication.definition.id);
+const recruitedFromPublication = recruitItem(published, publication.definition);
+const publishedInstance = recruitedFromPublication.bots.find(b => b.id === recruitedFromPublication.currentId);
+assert.notEqual(publishedInstance.routines[0].id, 'old');
+assert.equal(publishedInstance.routines[0].lastRunAt, undefined);
+const nextPublication = createPublication(published, research, { ...opts, prompt: '每周整理定价和开源动态。' });
+const withPendingUpdate = { ...recruitedFromPublication, expertPublications: [nextPublication, ...published.expertPublications] };
+assert.equal(availableDefinitions(withPendingUpdate).find(item => item.id === publication.definition.id).version, nextPublication.definition.version);
+assert.equal(publishedDefinitions(withPendingUpdate)[0].version, publication.definition.version);
+assert.equal(definitionUpdate(withPendingUpdate, publishedInstance), undefined);
+const withApprovedUpdate = { ...withPendingUpdate, expertPublications: [{ ...nextPublication, status: 'approved' }, ...published.expertPublications] };
+assert.equal(definitionUpdate(withApprovedUpdate, publishedInstance).version, nextPublication.definition.version);
+assert.deepEqual(versionHistory(nextPublication.definition, withApprovedUpdate).map(item => item.version), ['1.0.1', '1.0.0']);
+
+const update = definitionUpdate(base, research);
+assert.equal(update.version, '2.1.0');
+const updated = applyDefinitionUpdate(base, research, update).bots.find(b => b.id === research.id);
+assert.equal(updated.sourceVersion, update.version);
+assert.deepEqual(updated.memory, research.memory);
+assert.deepEqual(updated.messages, research.messages);
+assert.deepEqual(updated.mcpIds, research.mcpIds);
 
 console.log('market checks passed');

@@ -1,10 +1,12 @@
 import { MAIN_BOT_ID, SYSTEM_AGENTS, assignFaces, type SystemRole, seedHistory, type Bot, type BotMessage, type BotosState, type Mcp, type Skill } from './botModel';
+import { inferDashboardTemplate } from './dashboardTemplates';
+import { seedRoutines, seedWorkspaceFiles } from './workspaceWidgets';
 
 export const seedSkills: Skill[] = [
   { id: 'research', name: '网页调研', category: '调研', version: '1.4.0', owner: 'Samhar', calls: 312, failRate: 0.02,
     description: '围绕一个问题检索公开资料，交叉核对来源并整理发现。', widgets: [{ kind: 'sources', title: '来源与发现', span: 2 }] },
   { id: 'risk', name: '风险评估', category: '分析', version: '2.1.0', owner: '供应链组', calls: 148, failRate: 0.05,
-    description: '按影响与可能性评估事项，给出跟进建议与负责人。', widgets: [{ kind: 'alerts', title: '风险事项', span: 2 }] },
+    description: '按影响与可能性评估事项，给出跟进建议与负责人。', widgets: [{ kind: 'action-table', title: '风险事项', span: 3, tool: '更新风险状态' }] },
   { id: 'weekly', name: '周报生成', category: '写作', version: '1.0.3', owner: 'Samhar', calls: 96, failRate: 0.01,
     description: '汇总一周的对话、成果与运行记录，生成结构化周报。', widgets: [{ kind: 'metrics', title: '本周要点', span: 1 }] },
   { id: 'inspect', name: '数据巡检', category: '数据', version: '3.0.0', owner: '数据中台', calls: 820, failRate: 0.11,
@@ -19,13 +21,19 @@ export const seedMcps: Mcp[] = [
   { id: 'feishu', name: '飞书', kind: 'feishu', endpoint: 'mcp://feishu.internal/v1', credential: 'vault', enabled: true, owner: 'IT', calls: 1204,
     tools: ['读取群聊消息', '发送消息', '读取云文档'], widgets: [{ kind: 'feed', title: '群聊待回复', span: 1 }] },
   { id: 'github', name: 'GitHub', kind: 'github', endpoint: 'https://api.github.com/mcp', credential: 'vault', enabled: true, owner: '研发', calls: 388,
-    tools: ['列出 Issue', '读取 PR', '发表评论'], widgets: [{ kind: 'repo', title: 'PR 与 Issue', span: 2 }] },
+    tools: ['列出 Issue', '读取 PR', '请求评审', '发表评论'], widgets: [{ kind: 'action-table', title: 'PR 与 Issue', span: 3, tool: '读取 PR / 请求评审' }] },
   { id: 'warehouse', name: '数据仓库', kind: 'database', endpoint: 'mcp://dw.internal:7020', credential: 'vault', enabled: true, owner: '数据中台', calls: 2310,
     tools: ['查询表结构', '执行只读 SQL', '读取血缘'], widgets: [{ kind: 'checks', title: '数据表检查', span: 1 }] },
   { id: 'erp', name: 'ERP 采购', kind: 'erp', endpoint: 'mcp://erp.internal/purchase', credential: 'vault', enabled: true, owner: '供应链组', calls: 451,
     tools: ['查询供应商', '查询订单', '读取交付节点'], widgets: [{ kind: 'metrics', title: '采购指标', span: 1 }] },
   { id: 'websearch', name: '网页搜索', kind: 'web', endpoint: 'mcp://search.agentos/v2', credential: 'none', enabled: true, owner: '平台', calls: 1780,
     tools: ['搜索', '抓取网页'], widgets: [{ kind: 'sources', title: '来源与发现', span: 2 }] },
+  { id: 'personnel', name: '人员信息库', kind: 'database', endpoint: 'mcp://mock/personnel', credential: 'vault', enabled: true, owner: 'IT', calls: 0,
+    tools: ['lookup_personnel', 'analyze_personnel', 'request_personnel_reveal'], widgets: [
+      { kind: 'query-form', title: '人员查询', span: 2, action: 'direct', tool: 'lookup_personnel' },
+      { kind: 'query-form', title: '异常分析', span: 1, action: 'agent', tool: 'analyze_personnel' },
+      { kind: 'audit', title: '查询记录', span: 3, tool: 'lookup_personnel / analyze_personnel' },
+    ] },
 ];
 
 const msg = (author: BotMessage['author'], name: string, text: string, time: string, attachment?: string): BotMessage =>
@@ -33,7 +41,8 @@ const msg = (author: BotMessage['author'], name: string, text: string, time: str
 
 type SeedBot = Omit<Bot, 'face'>;
 const bot = (b: Omit<SeedBot, 'history' | 'memberIds' | 'createdAt'> & { memberIds?: string[]; scale?: number }): SeedBot => ({
-  memberIds: [], createdAt: '2026-09-01', history: seedHistory(b.id, b.scale ?? 1), ...b,
+  memberIds: [], createdAt: '2026-09-01', history: seedHistory(b.id, b.scale ?? 1),
+  dashboardUpdatedAt: Date.now(), dashboardTemplate: inferDashboardTemplate(b.name, b.prompt, b.mcpIds), routines: seedRoutines(b.id), files: seedWorkspaceFiles(b.id), ...b,
 });
 
 const systemGreeting: Record<SystemRole, { text: string; options: string[] }> = {
@@ -92,13 +101,18 @@ export function seedBotos(): BotosState {
       ],
     }),
     bot({
+      id: 'personnel', name: '人员查询', kind: 'bot', matured: false, sourceId: 'expert:personnel', model: '系统默认', skillIds: [], mcpIds: ['personnel'], requiredMcpIds: ['personnel'],
+      prompt: '通过人员信息库查询模拟人员记录。先填写事由，敏感字段默认脱敏，完整信息须审批。',
+      memory: [], messages: [msg('bot', '人员查询', '可以在右侧查询模拟人员记录，或把查询结果交给我分析。每次操作都会写进查询记录。', '09:00')],
+    }),
+    bot({
       id: 'brand-team', name: '品牌专家团', kind: 'group', matured: true, model: '系统默认', skillIds: ['brand', 'slides'], mcpIds: [], memberIds: ['research', 'work'],
       prompt: '品牌升级专家团。竞品调研专家负责研究，日常办公负责内容与物料。',
       memory: [],
       messages: [
         msg('user', 'Samhar', '准备下周品牌升级汇报', '11-07'),
         msg('member', '竞品调研专家', '我整理了三家竞品的品牌主张，供定位参考。', '11-07'),
-        msg('member', '日常办公', '演示稿初版已完成，共 6 页。', '11-07', '品牌升级提案.pptx'),
+        msg('member', '日常办公', '演示稿初版已完成，共 3 页。', '11-07', '品牌升级提案.pptx'),
       ],
     }),
     // 系统管理智能体：左边对话，右边是对应的管理面板
@@ -109,8 +123,9 @@ export function seedBotos(): BotosState {
   ]);
   return {
     version: 1, bots, currentId: 'work',
-    order: ['work', 'risk', 'data', 'research', 'brand-team'],
-    skills: seedSkills, mcps: seedMcps, pending: [],
+    order: ['work', 'personnel', 'risk', 'data', 'research', 'brand-team'],
+    skills: seedSkills, mcps: seedMcps.map(mcp => mcp.id === 'feishu' ? { ...mcp, credentialExpiresAt: Date.now() + 5 * 86400000 } : mcp), pending: [],
+    approvals: [], audit: [], expertPublications: [],
   };
 }
 

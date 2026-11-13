@@ -1,0 +1,118 @@
+.bos-personnel-form, .bos-personnel-result, .bos-approval-card {
+  display: grid;
+  gap: 12px;
+}
+
+.bos-personnel-form input {
+  width: 100%;
+  min-width: 0;
+}
+
+.bos-personnel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.bos-personnel-actions > span {
+  color: var(--u4f-text-muted);
+  font-size: 12px;
+}
+
+.bos-personnel-example {
+  border: 0;
+  border-radius: var(--u4f-radius-md);
+  background: transparent;
+  color: var(--u4f-primary);
+  padding: 7px 8px;
+  font-size: 12px;
+}
+
+.bos-personnel-example:hover { background: var(--u4f-primary-subtle); }
+
+.bos-personnel-error {
+  margin: 0;
+  color: var(--u4f-danger);
+  font-size: 12px;
+}
+
+.bos-personnel-output:not(:empty) { margin-top: 12px; }
+
+.bos-personnel-result, .bos-personnel-analysis {
+  margin: 0;
+  border: 1px solid var(--u4f-border);
+  border-radius: var(--u4f-radius-md);
+  padding: 12px;
+  background: var(--u4f-surface);
+}
+
+.bos-personnel-result dl, .bos-approval-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.bos-personnel-result dl > div, .bos-approval-card dl > div {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 4px;
+}
+
+.bos-personnel-result dt, .bos-approval-card dt { color: var(--u4f-text-muted); }
+.bos-personnel-result dd, .bos-approval-card dd { margin: 0; overflow-wrap: anywhere; }
+.bos-personnel-id { font-family: var(--u4f-font-mono); }
+
+.bos-audit-scroll { overflow-x: auto; }
+
+.bos-audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+
+.bos-audit-table :is(th, td) {
+  padding: 8px;
+  border-bottom: 1px solid var(--u4f-border);
+  vertical-align: top;
+}
+
+.bos-audit-table th { color: var(--u4f-text-muted); font-weight: 500; }
+.bos-audit-table td { overflow-wrap: anywhere; }
+.bos-audit-table tr:last-child td { border-bottom: 0; }
+.bos-audit-table time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.bos-approval-card {
+  border: 1px solid var(--u4f-border-strong);
+  border-radius: var(--u4f-radius-lg);
+  background: var(--u4f-surface);
+  padding: 12px;
+  text-align: left;
+}
+
+.bos-approval-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.bos-approval-card header svg { color: var(--u4f-info); flex-shrink: 0; }
+.bos-approval-card > p { margin: 0; overflow-wrap: anywhere; }
+.bos-msg--source .bos-approval-card > p { padding: 0; border: 0; background: transparent; }
+.bos-approval-card dl { font-size: 12px; }
+
+.bos-approval-status {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: var(--u4f-radius-full);
+  background: var(--u4f-background);
+  color: var(--u4f-text-muted);
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.bos-approval-status.is-pending { background: var(--u4f-warning-subtle); color: var(--u4f-warning); }
+.bos-approval-status.is-approved { background: var(--u4f-success-subtle); color: var(--u4f-success); }
+.bos-approval-status.is-rejected { background: var(--u4f-danger-subtle); color: var(--u4f-danger); }

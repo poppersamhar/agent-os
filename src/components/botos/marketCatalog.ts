@@ -3,9 +3,11 @@
 // 每个条目同时可以作为插件接入其他产品：远程调用（连接器）或下载插件包。
 
 import { RESERVED_FACES, pickFace, type FaceSpec } from './botFaces';
-import { botosReducer, uid, type Bot, type BotosState, type Mcp, type Skill } from './botModel';
+import { botosReducer, HISTORY_DAYS, uid, type Bot, type BotosState, type Mcp, type Skill } from './botModel';
 import { seedMcps, seedSkills } from './botosSeed';
+import { inferDashboardTemplate, type DashboardTemplate } from './dashboardTemplates';
 import { openingMessage } from './firstTask';
+import type { Routine } from './workspaceWidgets';
 
 export type MarketKind = 'expert' | 'team' | 'skill' | 'connector';
 export type MarketSource = 'official' | 'org' | 'mine';
@@ -13,12 +15,21 @@ export type MarketSource = 'official' | 'org' | 'mine';
 interface MarketBase {
   id: string; kind: MarketKind; name: string; summary: string; description: string;
   source: MarketSource; owner: string; version: string; installs: number; updatedAt: string; tags: string[];
+  versions?: MarketVersion[];
 }
-export interface ExpertItem extends MarketBase { kind: 'expert'; prompt: string; skillIds: string[]; mcpIds: string[]; face: FaceSpec }
-export interface TeamItem extends MarketBase { kind: 'team'; prompt: string; memberIds: string[]; skillIds: string[]; mcpIds: string[] }
+export interface MarketVersion { version: string; updatedAt: string; notes: string }
+export type RoutineTemplate = Pick<Routine, 'name' | 'trigger' | 'enabled'>;
+interface DefinitionFields {
+  prompt: string; skillIds: string[]; mcpIds: string[];
+  dashboardTemplate?: DashboardTemplate; widgetOrder?: string[]; routineTemplates?: RoutineTemplate[];
+}
+export interface ExpertItem extends MarketBase, DefinitionFields { kind: 'expert'; face: FaceSpec }
+export interface TeamItem extends MarketBase, DefinitionFields { kind: 'team'; memberIds: string[]; memberDefinitions?: ExpertItem[] }
 export interface SkillItem extends MarketBase { kind: 'skill'; skill: Skill }
 export interface ConnectorItem extends MarketBase { kind: 'connector'; mcp: Mcp }
 export type MarketItem = ExpertItem | TeamItem | SkillItem | ConnectorItem;
+export type RecruitableItem = ExpertItem | TeamItem;
+export const isRecruitable = (item: MarketItem): item is RecruitableItem => item.kind === 'expert' || item.kind === 'team';
 
 export const kindLabels: Record<MarketKind, string> = { expert: '专家', team: '专家团', skill: '技能', connector: '连接器' };
 export const sourceLabels: Record<MarketSource, string> = { official: '官方', org: '企业', mine: '我的' };
@@ -61,8 +72,9 @@ const connectorItems: ConnectorItem[] = [...seedMcps, ...extraMcps].map(mcp => (
 
 type ExpertSeed = Omit<ExpertItem, 'kind' | 'face' | 'description'> & { description?: string };
 const expertSeeds: ExpertSeed[] = [
-  { id: 'expert:research', name: '竞品调研专家', source: 'official', owner: 'AgentOS', version: '2.0.0', installs: 1340, updatedAt: '11-05', tags: ['调研'],
-    summary: '持续跟踪竞品的产品更新、定价与开源动向，定期给出结论。', prompt: '持续跟踪竞品动态。用网页调研整理产品更新、定价与开源动向，每周给出结论。', skillIds: ['research', 'weekly'], mcpIds: ['websearch', 'github'] },
+  { id: 'expert:research', name: '竞品调研专家', source: 'official', owner: 'AgentOS', version: '2.1.0', installs: 1340, updatedAt: '11-10', tags: ['调研'],
+    summary: '持续跟踪竞品的产品更新、定价与开源动向，定期给出结论。', prompt: '持续跟踪竞品动态。用网页调研整理产品更新、定价与开源动向，每周给出结论，发现定价变化时单独提醒。', skillIds: ['research', 'weekly'], mcpIds: ['websearch', 'github'],
+    versions: [{ version: '2.1.0', updatedAt: '11-10', notes: '新增定价变化提醒。' }, { version: '2.0.0', updatedAt: '11-05', notes: '支持整理产品更新、定价与开源动向。' }] },
   { id: 'expert:risk', name: '风险跟进专家', source: 'org', owner: '供应链组', version: '1.3.0', installs: 210, updatedAt: '10-30', tags: ['风控'],
     summary: '识别交付与供应商风险，跟进处理并生成风险周报。', prompt: '跟进供应链风险。用风险评估识别交付与供应商风险，每周生成风险周报。', skillIds: ['risk', 'weekly'], mcpIds: ['erp', 'feishu'] },
   { id: 'expert:data', name: '数据巡检专家', source: 'org', owner: '数据中台', version: '3.0.0', installs: 160, updatedAt: '11-01', tags: ['数据'],
@@ -75,6 +87,8 @@ const expertSeeds: ExpertSeed[] = [
     summary: '整理会议结论与待办，自动发到对应群里并跟进。', prompt: '整理会议结论、待办与负责人。会议纪要整理后发到钉钉或飞书群，并跟进待办。', skillIds: ['minutes'], mcpIds: ['dingtalk', 'feishu'] },
   { id: 'expert:contract', name: '合同审查专家', source: 'org', owner: '法务部', version: '0.8.0', installs: 70, updatedAt: '11-07', tags: ['法务'],
     summary: '对照合同模板标出风险条款与缺失条款。', prompt: '审查合同。用合同审查对照合同库里的模板，标出风险条款与缺失条款。', skillIds: ['contract'], mcpIds: ['contracts-db'] },
+  { id: 'expert:personnel', name: '人员查询专家', source: 'org', owner: 'IT', version: '1.0.0', installs: 32, updatedAt: '11-12', tags: ['查询'],
+    summary: '按事由查询人员记录，支持脱敏展示、异常分析与敏感信息审批。', prompt: '通过人员信息库查询人员记录和分析异常。默认脱敏展示，查看完整信息须审批。', skillIds: [], mcpIds: ['personnel'], dashboardTemplate: 'query' },
 ];
 
 // 市场里的专家头像也按名称分配，彼此不重复。
@@ -101,8 +115,39 @@ const teamItems: TeamItem[] = [
 
 export const marketCatalog: MarketItem[] = [...expertItems, ...teamItems, ...skillItems, ...connectorItems];
 
-export const findItem = (id: string) => marketCatalog.find(item => item.id === id);
-export const teamMembers = (team: TeamItem): ExpertItem[] => team.memberIds.map(findItem).filter((item): item is ExpertItem => item?.kind === 'expert');
+export function publishedDefinitions(state: BotosState): RecruitableItem[] {
+  const latest = new Map<string, RecruitableItem>();
+  for (const publication of state.expertPublications ?? []) {
+    if (publication.status !== 'approved') continue;
+    const { definition } = publication;
+    const previous = latest.get(definition.id);
+    if (!previous || isNewerVersion(definition.version, previous.version)) latest.set(definition.id, definition);
+  }
+  return [...latest.values()];
+}
+
+export const findItem = (id: string, state?: BotosState) => marketCatalog.find(item => item.id === id) ?? (state && publishedDefinitions(state).find(item => item.id === id));
+export const teamMembers = (team: TeamItem): ExpertItem[] => team.memberDefinitions ?? team.memberIds.map(id => findItem(id)).filter((item): item is ExpertItem => item?.kind === 'expert');
+
+export function versionHistory(item: MarketItem, state: BotosState): MarketVersion[] {
+  if (item.versions) return item.versions;
+  const versions = (state.expertPublications ?? []).filter(publication => publication.status === 'approved' && publication.definition.id === item.id && publication.definition.version !== item.version)
+    .map(({ definition }) => ({ version: definition.version, updatedAt: definition.updatedAt, notes: '更新了专家定义。' }));
+  return [{ version: item.version, updatedAt: item.updatedAt, notes: '定义版本。' }, ...versions]
+    .sort((a, b) => isNewerVersion(a.version, b.version) ? -1 : 1);
+}
+
+function isNewerVersion(candidate: string, current: string): boolean {
+  const parts = candidate.split('.').map(Number);
+  const existing = current.split('.').map(Number);
+  return ((parts[0] ?? 0) - (existing[0] ?? 0) || (parts[1] ?? 0) - (existing[1] ?? 0) || (parts[2] ?? 0) - (existing[2] ?? 0)) > 0;
+}
+
+export function definitionUpdate(state: BotosState, bot: Bot): RecruitableItem | undefined {
+  const item = bot.sourceId ? findItem(bot.sourceId, state) : undefined;
+  const current = bot.sourceVersion ?? (bot.sourceId === 'expert:research' ? '2.0.0' : item?.version);
+  return item && isRecruitable(item) && current && isNewerVersion(item.version, current) ? item : undefined;
+}
 
 /** 条目依赖的全部技能 / 连接器（专家团包含成员的依赖）。 */
 export function itemDeps(item: MarketItem): { skillIds: string[]; mcpIds: string[] } {
@@ -139,7 +184,7 @@ function ensureDeps(state: BotosState, skillIds: string[], mcpIds: string[]): Bo
   return next;
 }
 
-const emptyHistory = (): [number, number][] => Array.from({ length: 56 }, () => [0, 0]);
+const emptyHistory = (): [number, number][] => Array.from({ length: HISTORY_DAYS }, () => [0, 0]);
 
 function createBot(state: BotosState, bot: Omit<Bot, 'face' | 'memory' | 'history' | 'createdAt' | 'model'>, preferred?: FaceSpec): BotosState {
   const taken = state.bots.map(b => b.face);
@@ -147,37 +192,78 @@ function createBot(state: BotosState, bot: Omit<Bot, 'face' | 'memory' | 'histor
   return botosReducer(state, { type: 'create-bot', bot: { ...bot, face, model: '系统默认', memory: [], history: emptyHistory(), createdAt: new Date().toLocaleDateString('zh-CN') } });
 }
 
-function ensureExpert(state: BotosState, expert: ExpertItem): [BotosState, string] {
-  const existing = state.bots.find(b => b.sourceId === expert.id);
-  if (existing) return [state, existing.id];
-  const next = ensureDeps(state, expert.skillIds, expert.mcpIds);
-  const id = `bot-${uid().slice(0, 8)}`;
-  return [createBot(next, {
-    id, name: expert.name, kind: 'bot', prompt: expert.prompt, skillIds: expert.skillIds, mcpIds: expert.mcpIds, memberIds: [], sourceId: expert.id,
-    messages: [openingMessage(expert.name, expert.prompt)],
-  }, expert.face), id];
+export function recruitmentName(state: BotosState, item: RecruitableItem): string {
+  const names = new Set(state.bots.map(bot => bot.name));
+  const count = state.bots.filter(bot => bot.sourceId === item.id).length;
+  if (!count && !names.has(item.name)) return item.name;
+  let suffix = Math.max(2, count + 1);
+  while (names.has(`${item.name} ${suffix}`)) suffix += 1;
+  return `${item.name} ${suffix}`;
 }
 
-/** 把市场条目添加到 AgentOS：缺的技能 / 连接器一起带上；专家团会先添加成员专家。纯函数，返回新状态。 */
-export function installItem(state: BotosState, item: MarketItem): BotosState {
-  if (isInstalled(state, item)) return state;
-  if (item.kind === 'skill' || item.kind === 'connector') {
-    const deps = itemDeps(item);
-    return ensureDeps(state, deps.skillIds, deps.mcpIds);
-  }
-  if (item.kind === 'expert') return ensureExpert(state, item)[0];
-  let next = ensureDeps(state, item.skillIds, item.mcpIds);
+export interface RecruitOptions { name?: string; approvedMcpIds?: string[]; groupId?: string }
+
+export function connectorFor(state: BotosState, id: string): Mcp | undefined {
+  return state.mcps.find(mcp => mcp.id === id) ?? catalogMcp(id);
+}
+
+function definitionFields(item: RecruitableItem) {
+  return {
+    prompt: item.prompt,
+    skillIds: [...item.skillIds],
+    sourceVersion: item.version,
+    dashboardTemplate: item.dashboardTemplate ?? inferDashboardTemplate(item.name, item.prompt, item.mcpIds),
+    widgetOrder: item.widgetOrder ? [...item.widgetOrder] : undefined,
+  };
+}
+
+/** 每次招募创建新实例，专家团成员也从各自的定义重新创建。 */
+export function recruitItem(state: BotosState, item: RecruitableItem, options: RecruitOptions = {}): BotosState {
+  const group = state.bots.find(bot => bot.id === options.groupId && bot.kind === 'group');
+  if (options.groupId && (!group || item.kind !== 'expert')) return state;
+  const name = options.name?.trim() || recruitmentName(state, item);
+  const deps = itemDeps(item);
+  let next = ensureDeps(state, deps.skillIds, deps.mcpIds);
+  const approved = new Set(options.approvedMcpIds);
+  const mcpIds = item.mcpIds.filter(id => approved.has(id) && connectorFor(next, id)?.enabled);
   const memberIds: string[] = [];
-  teamMembers(item).forEach(member => {
-    const [after, id] = ensureExpert(next, member);
-    next = after;
-    memberIds.push(id);
-  });
+  const members = item.kind === 'team' ? teamMembers(item) : [];
+  for (const member of members) {
+    next = recruitItem(next, member, { approvedMcpIds: options.approvedMcpIds });
+    memberIds.push(next.currentId);
+  }
   const id = `bot-${uid().slice(0, 8)}`;
-  return createBot(next, {
-    id, name: item.name, kind: 'group', prompt: item.prompt, skillIds: item.skillIds, mcpIds: item.mcpIds, memberIds, sourceId: item.id,
-    messages: [openingMessage(item.name, item.prompt, 'member', `成员：${teamMembers(item).map(m => m.name).join('、')}。`)],
-  });
+  const prefix = `我是从「${item.name}」招募来的，记忆从空开始。${members.length ? `成员：${members.map(member => member.name).join('、')}。` : ''}`;
+  next = createBot(next, {
+    ...definitionFields(item), id, name, kind: item.kind === 'team' ? 'group' : 'bot', memberIds, sourceId: item.id,
+    mcpIds, requiredMcpIds: [...item.mcpIds],
+    matured: false, dashboardUpdatedAt: Date.now(),
+    capabilityGrants: mcpIds.map(id => ({ kind: 'mcp', id, grantedBy: 'Samhar' })),
+    routines: item.routineTemplates?.map(routine => ({ ...routine, id: uid() })),
+    messages: [openingMessage(name, item.prompt, item.kind === 'team' ? 'member' : 'bot', prefix)],
+  }, item.kind === 'expert' ? item.face : undefined);
+  if (!group) return next;
+  next = botosReducer(next, { type: 'update-bot', id: group.id, patch: { memberIds: [...group.memberIds, id] } });
+  return botosReducer(next, { type: 'select', id: group.id });
+}
+
+export function installItem(state: BotosState, item: MarketItem): BotosState {
+  if (isRecruitable(item)) return recruitItem(state, item);
+  if (isInstalled(state, item)) return state;
+  const deps = itemDeps(item);
+  return ensureDeps(state, deps.skillIds, deps.mcpIds);
+}
+
+export function applyDefinitionUpdate(state: BotosState, bot: Bot, item: RecruitableItem): BotosState {
+  const current = state.bots.find(candidate => candidate.id === bot.id);
+  if (!current) return state;
+  const available = definitionUpdate(state, current);
+  if (available?.id !== item.id || available.version !== item.version) return state;
+  const next = ensureDeps(state, available.skillIds, available.mcpIds);
+  return botosReducer(next, { type: 'update-bot', id: bot.id, patch: {
+    ...definitionFields(available), widgetOrder: current.widgetOrder ?? available.widgetOrder,
+    requiredMcpIds: [...new Set([...available.mcpIds, ...current.mcpIds])],
+  } });
 }
 
 // ───────────────────────── 作为插件接入其他产品 ─────────────────────────
@@ -217,7 +303,7 @@ export function pluginPackage(item: MarketItem): { filename: string; mime: strin
       type: item.kind === 'team' ? 'agentos.team' : 'agentos.expert', name: item.name, version: item.version, role: item.prompt,
       ...(item.kind === 'team' ? { members: teamMembers(item).map(m => ({ name: m.name, role: m.prompt })) } : {}),
       requires: { skills: deps.skillIds, connectors: deps.mcpIds },
-      extensions: { agentos: { face: item.kind === 'expert' ? item.face : undefined } },
+      extensions: { agentos: { face: item.kind === 'expert' ? item.face : undefined, dashboardTemplate: item.dashboardTemplate, widgetOrder: item.widgetOrder, routines: item.routineTemplates } },
     };
   return { filename: `${base}.json`, mime: 'application/json;charset=utf-8', content: JSON.stringify(manifest, null, 2) };
 }

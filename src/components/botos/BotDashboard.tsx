@@ -1,14 +1,44 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, BadgeCheck, Sprout, CircleCheck, CircleDot, FileText, GitPullRequest, MessageSquare, TriangleAlert } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Sprout, CircleCheck, CircleDot, GitPullRequest, MessageSquare, TriangleAlert } from 'lucide-react';
 import { HISTORY_DAYS, isAgent, composeDashboard, faceStateOf, memberBots, pendingCount, seeded, waitingFor, type Bot, type BotosState, type WaitingItem, type WidgetSlot } from './botModel';
 import BotAvatar from './BotAvatar';
 import type { FaceState } from './botFaces';
+import type { ApprovalDecision } from './governance';
+import { AuditWidget, PersonnelWidget } from './PersonnelWidget';
+import { type PersonnelAction, type PersonnelInput } from './personnel';
+import { ActionTableWidget, ArtifactPreviewWidget, RecentArtifactsWidget, RoutinesWidget, WorkspaceWidget } from './AgentWidgets';
+import { workspaceFiles, type TableAction, type WorkspaceFile } from './workspaceWidgets';
+import { ApprovalsWidget, CapabilitiesWidget, CapabilityHealth, SensitiveOperations } from './GovernanceWidgets';
+import CaptureExpertDialog from './CaptureExpertDialog';
+import type { ExpertPublication } from './expertDefinitions';
+import { applyDefinitionUpdate, definitionUpdate } from './marketCatalog';
 
 // 固定的 Widget 组件库：Spec 只声明「放什么」，这里负责「怎么画」。
 
 const whenLabel = { today: '今天', week: '本周', later: '稍后' } as const;
 
-interface Ctx { state: BotosState; bot: Bot; scope: Bot[]; recentlyDone: string[]; onSelectBot: (id: string) => void }
+interface DashboardActions {
+  onSelectBot: (id: string) => void;
+  onAsk: (slot: WidgetSlot) => void;
+  onRefresh: (slot: WidgetSlot) => void;
+  onDashboardChange: (undo: boolean) => void;
+  onDecide: (id: string, decision: ApprovalDecision) => void;
+  onRequestConnector: (id: string) => void;
+  onPersonnel: (slot: WidgetSlot, mode: PersonnelAction, input: PersonnelInput) => void;
+  onReveal: (id: string) => void;
+  onRoutineToggle: (id: string) => void;
+  onRoutineRun: (id: string) => void;
+  onTableAction: (source: WidgetSlot['source'], id: string, action: TableAction) => void;
+  onGroupRecruit: () => void;
+  onCapture: (publication: ExpertPublication, prompt: string) => void;
+  onApplyDefinition: (next: BotosState) => void;
+}
+
+interface Ctx extends DashboardActions {
+  state: BotosState; bot: Bot; scope: Bot[]; recentlyDone: string[];
+  preview?: WorkspaceFile;
+  onPreview: (file: WorkspaceFile) => void;
+}
 
 function scopeBots(state: BotosState, bot: Bot): Bot[] {
   if (bot.kind === 'main') return state.bots.filter(isAgent);
@@ -117,12 +147,6 @@ function Runs(ctx: Ctx) {
   </div>;
 }
 
-function Artifacts(ctx: Ctx) {
-  const files = ctx.scope.flatMap(b => b.messages.filter(m => m.attachment).map(m => ({ id: m.id, name: m.attachment!, bot: b.name, time: m.time }))).reverse().slice(0, 4);
-  if (!files.length) return <p className="bos-empty-note">完成第一项任务后，成果会出现在这里</p>;
-  return <ul className="bos-list">{files.map(f => <li key={f.id}><FileText size={14} /><div><strong>{f.name}</strong><small>{f.bot} · {f.time}</small></div></li>)}</ul>;
-}
-
 const sampleFeed = [
   { who: '品牌升级群 · 李然', text: '首页的主视觉什么时候能定？' },
   { who: '项目周会 · 王珂', text: '@办公专家帮忙把会议纪要发一下' },
@@ -186,10 +210,26 @@ function Widget({ slot, ctx }: { slot: WidgetSlot; ctx: Ctx }) {
   switch (slot.kind) {
     case 'waiting': return <Waiting {...ctx} />;
     case 'agents': return <Agents {...ctx} />;
-    case 'members': return <Agents {...ctx} members />;
+    case 'members': return <><Agents {...ctx} members /><button type="button" className="bos-secondary bos-group-recruit" onClick={ctx.onGroupRecruit}>招募专家</button></>;
     case 'done': return <Done {...ctx} />;
     case 'runs': return <Runs {...ctx} />;
-    case 'artifacts': return <Artifacts {...ctx} />;
+    case 'artifacts': return <RecentArtifactsWidget files={ctx.scope.flatMap(workspaceFiles)} onPreview={ctx.onPreview} />;
+    case 'artifact-preview': return <ArtifactPreviewWidget key={ctx.preview?.id} file={ctx.preview} />;
+    case 'workspace': return <WorkspaceWidget files={workspaceFiles(ctx.bot)} onPreview={ctx.onPreview} />;
+    case 'routines': return <RoutinesWidget routines={ctx.bot.routines ?? []} onToggle={ctx.onRoutineToggle} onRun={ctx.onRoutineRun} />;
+    case 'action-table': return <ActionTableWidget source={slot.source} actions={ctx.bot.tableActions ?? {}} onAction={(row, action) => ctx.onTableAction(slot.source, row.id, action)} />;
+    case 'query-form': {
+      const mode = slot.action ?? 'direct';
+      const result = ctx.bot.personnelResults?.[mode];
+      const approval = result && ctx.state.approvals.find(item => item.kind === 'reveal-personnel' && item.targetId === result.id && item.botId === ctx.bot.id);
+      return <PersonnelWidget action={mode} result={result} approval={approval} working={ctx.state.pending.some(task => task.botId === ctx.bot.id && task.slotId === slot.id)}
+        onRun={input => ctx.onPersonnel(slot, mode, input)} onRequestReveal={ctx.onReveal} />;
+    }
+    case 'audit': return <AuditWidget records={ctx.state.audit.filter(record => record.botId === ctx.bot.id && ['人员查询', '异常分析', '查看完整信息'].includes(record.action))} />;
+    case 'capabilities': return <CapabilitiesWidget bot={ctx.bot} state={ctx.state} onRequest={ctx.onRequestConnector} />;
+    case 'approvals': return <ApprovalsWidget state={ctx.state} onDecide={ctx.onDecide} />;
+    case 'health': return <CapabilityHealth state={ctx.state} />;
+    case 'sensitive-operations': return <SensitiveOperations state={ctx.state} />;
     case 'feed': return <Feed />;
     case 'repo': return <Repo />;
     case 'sources': return <Sources />;
@@ -200,33 +240,41 @@ function Widget({ slot, ctx }: { slot: WidgetSlot; ctx: Ctx }) {
   }
 }
 
-function sourceLabel(slot: WidgetSlot, state: BotosState): string | null {
-  if (slot.source === 'core') return null;
+function WidgetCard({ slot, ctx }: { slot: WidgetSlot; ctx: Ctx }) {
+  const [showSource, setShowSource] = useState(false);
   const [type, id] = slot.source.split(':');
-  const name = type === 'skill' ? state.skills.find(s => s.id === id)?.name : state.mcps.find(m => m.id === id)?.name;
-  return name ? `${type === 'skill' ? '技能' : '连接器'} · ${name}` : null;
+  const capability = type === 'skill' ? ctx.state.skills.find(item => item.id === id) : ctx.state.mcps.find(item => item.id === id);
+  const label = slot.source === 'core' ? '工作台' : `${type === 'skill' ? '技能' : '连接器'} · ${capability?.name ?? id}`;
+  const tool = slot.tool ?? (capability && 'tools' in capability ? capability.tools.join('、') : undefined);
+  const [openedAt] = useState(Date.now);
+  const updatedAt = ctx.bot.widgetUpdates?.[slot.id] ?? ctx.bot.dashboardUpdatedAt ?? openedAt;
+  const refreshTime = new Date(updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  const closeMenu = (button: HTMLButtonElement) => { button.closest('details')?.removeAttribute('open'); };
+  return <article id={slot.kind === 'artifact-preview' ? 'widget-artifact-preview' : undefined} className={`bos-card bos-card--span${slot.span}`}>
+    <header><h2>{slot.title}</h2><div className="bos-widget-meta">
+      <span className="bos-card-source">{label}</span>
+      <time dateTime={new Date(updatedAt).toISOString()}>更新于 {refreshTime}</time>
+      <button type="button" className="bos-link-button bos-widget-ask" onClick={() => ctx.onAsk(slot)} aria-label={`问问它：${slot.title}`}>问问它</button>
+      <details className="bos-widget-menu"><summary aria-label={`${slot.title} 操作`}>···</summary><div>
+        <button type="button" onClick={event => { ctx.onRefresh(slot); closeMenu(event.currentTarget); }}>刷新</button>
+        <button type="button" onClick={event => { setShowSource(value => !value); closeMenu(event.currentTarget); }}>查看数据来源</button>
+      </div></details>
+    </div></header>
+    {showSource ? <p className="bos-widget-source-detail">{label}{tool ? ` · 工具 ${tool}` : ''}</p> : null}
+    <Widget slot={slot} ctx={ctx} />
+  </article>;
 }
 
-/** 沉淀：把用得顺的智能体变成专家（智能体群变成专家团），可以同时提交发布到企业市场。 */
-function MatureControl({ bot, onMature }: { bot: Bot; onMature: (publish: boolean) => void }) {
-  const [open, setOpen] = useState(false);
-  const [publish, setPublish] = useState(true);
-  const target = bot.kind === 'group' ? '专家团' : '专家';
-  if (bot.matured) return <span className="bos-matured"><BadgeCheck size={14} />{target}</span>;
-  return <div className="bos-mature">
-    <button type="button" className="bos-secondary" aria-expanded={open} onClick={() => setOpen(v => !v)}><Sprout size={14} />沉淀为{target}</button>
-    {open ? <div className="bos-mature-pop" role="dialog" aria-label={`沉淀为${target}`}>
-      <strong>沉淀为{target}</strong>
-      <p>「{bot.name}」会成为一个成熟的{target}：保留现有的角色、技能、连接器和团队记忆，出现在「专家」里，可以被复用。</p>
-      <label><input type="checkbox" checked={publish} onChange={e => setPublish(e.target.checked)} />同时提交发布到企业市场（需管理员审批）</label>
-      <div className="bos-form-actions"><button type="button" className="bos-primary" onClick={() => { onMature(publish); setOpen(false); }}>确认沉淀</button><button type="button" className="bos-secondary" onClick={() => setOpen(false)}>取消</button></div>
-    </div> : null}
-  </div>;
-}
-
-export default function BotDashboard({ state, bot, recentlyDone = [], faceState = 'idle', onSelectBot, onMature }: { state: BotosState; bot: Bot; recentlyDone?: string[]; faceState?: FaceState; onSelectBot: (id: string) => void; onMature?: (publish: boolean) => void }) {
+export default function BotDashboard({ state, bot, recentlyDone = [], faceState = 'idle', ...actions }: DashboardActions & { state: BotosState; bot: Bot; recentlyDone?: string[]; faceState?: FaceState }) {
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [preview, setPreview] = useState<WorkspaceFile>();
   const spec = useMemo(() => composeDashboard(bot, state.skills, state.mcps), [bot, state.skills, state.mcps]);
-  const ctx: Ctx = { state, bot, scope: scopeBots(state, bot), recentlyDone, onSelectBot };
+  const publishing = state.expertPublications?.some(item => item.botId === bot.id && item.status === 'pending');
+  const update = isAgent(bot) ? definitionUpdate(state, bot) : undefined;
+  const ctx: Ctx = { ...actions, state, bot, scope: scopeBots(state, bot), recentlyDone, preview, onPreview: file => {
+    setPreview(file);
+    document.getElementById('widget-artifact-preview')?.scrollIntoView({ block: 'nearest' });
+  } };
   const working = ctx.scope.filter(b => pendingCount(state, b.id) > 0).length;
   const waiting = waitingItems(ctx).length;
   const summary = bot.kind === 'main'
@@ -240,16 +288,25 @@ export default function BotDashboard({ state, bot, recentlyDone = [], faceState 
         <h1>{spec.headline.title}{working ? <span className="bos-live"><i />工作中</span> : null}</h1>
         <p>{summary}</p>
       </div>
-      {isAgent(bot) && onMature ? <MatureControl key={bot.id} bot={bot} onMature={onMature} /> : null}
+      {isAgent(bot) ? <div className="bos-dash-capture">
+        {bot.matured ? <span className="bos-matured"><BadgeCheck size={14} />{bot.kind === 'group' ? '专家团' : '专家'}</span> : null}
+        <button type="button" className="bos-secondary" disabled={publishing} onClick={() => setCaptureOpen(true)}><Sprout size={14} />
+          {publishing ? '发布审批中' : bot.matured ? '沉淀新版本' : `沉淀为${bot.kind === 'group' ? '专家团' : '专家'}`}
+        </button>
+      </div> : null}
     </header>
-    <div className="bos-dash-grid">
-      {spec.widgets.map(slot => {
-        const from = sourceLabel(slot, state);
-        return <article key={slot.id} className={`bos-card bos-card--span${slot.span}`}>
-          <header><h2>{slot.title}</h2>{from ? <span className="bos-card-source">{from}</span> : null}</header>
-          <Widget slot={slot} ctx={ctx} />
-        </article>;
-      })}
-    </div>
+    {bot.dashboardChange ? <div className="bos-dashboard-change" role="status">
+      <span>装上了「{bot.dashboardChange.capability}」，面板多了「{bot.dashboardChange.titles.join('、')}」。</span>
+      <button type="button" className="bos-secondary" onClick={() => actions.onDashboardChange(true)}>撤销</button>
+      <button type="button" className="bos-link-button" onClick={() => actions.onDashboardChange(false)}>知道了</button>
+    </div> : null}
+    {update ? <div className="bos-dashboard-change"><span>「{update.name}」有新版本，可更新定义，保留现有记忆。</span>
+      <button type="button" className="bos-secondary" onClick={() => actions.onApplyDefinition(applyDefinitionUpdate(state, bot, update))}>更新定义</button>
+    </div> : null}
+    <div className="bos-dash-grid">{spec.widgets.map(slot => <WidgetCard key={slot.id} slot={slot} ctx={ctx} />)}</div>
+    {captureOpen ? <CaptureExpertDialog state={state} bot={bot} panelWidgets={spec.widgets} onClose={() => setCaptureOpen(false)} onSave={(publication, prompt) => {
+      actions.onCapture(publication, prompt);
+      setCaptureOpen(false);
+    }} /> : null}
   </section>;
 }
